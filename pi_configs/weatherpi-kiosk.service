@@ -1,0 +1,17 @@
+[Unit]
+Description=WeatherPi Kiosk Display
+After=graphical.target lightdm.service
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=cagdas
+Environment=DISPLAY=:0
+WorkingDirectory=/home/cagdas
+ExecStartPre=/bin/sleep 15
+ExecStart=/bin/bash -c "firefox-esr --kiosk http://localhost/weather.html"
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=graphical.target

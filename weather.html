@@ -237,7 +237,6 @@
         function updateDateTime() {
             try {
                 const now = new Date();
-                console.log('Current time:', now);
                 
                 const dateOptions = { 
                     weekday: 'short', 
@@ -252,14 +251,9 @@
                 const dateStr = now.toLocaleDateString('en-US', dateOptions);
                 const timeStr = now.toLocaleTimeString('en-US', timeOptions);
                 
-                console.log('Formatted date:', dateStr, 'time:', timeStr);
-                
                 const datetimeElement = document.getElementById('datetime');
-                console.log('Datetime element:', datetimeElement);
-                
                 if (datetimeElement) {
                     datetimeElement.textContent = `${dateStr} ${timeStr}`;
-                    console.log('DateTime updated successfully');
                 } else {
                     console.error('Could not find datetime element');
                 }
@@ -334,48 +328,75 @@
                 // Clear the container
                 forecastContainer.innerHTML = '';
                 
-                // Get one forecast per day starting from tomorrow  
-                const dailyForecasts = [];
+                // Group forecast data by day and calculate actual daily min/max
+                const dailyData = {};
                 const today = new Date().toDateString();
-                const seenDays = new Set([today]); // Exclude today
                 
-                // Find future forecast items for different days
-                for (const item of forecast.list) {
+                // Process all forecast items to get real daily H/L
+                forecast.list.forEach(item => {
                     const date = new Date(item.dt * 1000);
                     const dayKey = date.toDateString();
                     
-                    if (!seenDays.has(dayKey) && dailyForecasts.length < 4) {
-                        seenDays.add(dayKey);
-                        dailyForecasts.push(item);
+                    // Skip today's data
+                    if (dayKey === today) return;
+                    
+                    if (!dailyData[dayKey]) {
+                        dailyData[dayKey] = {
+                            date: date,
+                            temps: [],
+                            conditions: [],
+                            rainChances: [],
+                            rainAmounts: []
+                        };
                     }
-                }
+                    
+                    // Collect all data for this day
+                    dailyData[dayKey].temps.push(item.main.temp);
+                    dailyData[dayKey].conditions.push(item.weather[0].main);
+                    dailyData[dayKey].rainChances.push(item.pop || 0);
+                    dailyData[dayKey].rainAmounts.push(item.rain ? item.rain['3h'] || 0 : 0);
+                });
+                
+                // Convert to array and take first 4 days
+                const dailyForecasts = Object.values(dailyData)
+                    .sort((a, b) => a.date - b.date)
+                    .slice(0, 4);
                 
                 console.log('Found forecasts for', dailyForecasts.length, 'different days');
                 
-                // Create forecast cards
-                dailyForecasts.forEach((item) => {
-                    const date = new Date(item.dt * 1000);
-                    const day = date.toLocaleDateString('en-US', { weekday: 'short' });
-                    const temp = Math.round(item.main.temp);
-                    const tempMax = Math.round(item.main.temp_max);
-                    const tempMin = Math.round(item.main.temp_min);
-                    const condition = item.weather[0].main;
-                    const iconSrc = getWeatherIcon(condition.toLowerCase());
+                // Create forecast cards with proper daily H/L
+                dailyForecasts.forEach((dayData) => {
+                    const day = dayData.date.toLocaleDateString('en-US', { weekday: 'short' });
                     
-                    // Get rain data
-                    const rainChance = item.pop ? Math.round(item.pop * 100) : 0;
-                    const rainAmount = item.rain ? (item.rain['3h'] || 0).toFixed(1) : '0.0';
+                    // Calculate actual daily min/max from all temperature readings
+                    const tempMax = Math.round(Math.max(...dayData.temps));
+                    const tempMin = Math.round(Math.min(...dayData.temps));
+                    const avgTemp = Math.round(dayData.temps.reduce((a, b) => a + b, 0) / dayData.temps.length);
+                    
+                    // Use most common condition for the day
+                    const conditionCounts = {};
+                    dayData.conditions.forEach(condition => {
+                        conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
+                    });
+                    const mostCommonCondition = Object.keys(conditionCounts)
+                        .reduce((a, b) => conditionCounts[a] > conditionCounts[b] ? a : b);
+                    
+                    const iconSrc = getWeatherIcon(mostCommonCondition.toLowerCase());
+                    
+                    // Calculate average rain chance and total rain amount
+                    const avgRainChance = Math.round(dayData.rainChances.reduce((a, b) => a + b, 0) / dayData.rainChances.length * 100);
+                    const totalRainAmount = dayData.rainAmounts.reduce((a, b) => a + b, 0).toFixed(1);
                     
                     const dayDiv = document.createElement('div');
                     dayDiv.className = 'forecast-day';
                     dayDiv.innerHTML = `
                         <div>${day}</div>
-                        <img src="${iconSrc}" alt="${condition}" style="width: 40px; height: 40px;">
+                        <img src="${iconSrc}" alt="${mostCommonCondition}" style="width: 40px; height: 40px;">
                         <div class="forecast-temp-group">
-                            <div class="forecast-temp">${temp}°</div>
+                            <div class="forecast-temp">${avgTemp}°</div>
                             <div style="font-size: 11px; color: #B0E0E6;">H:${tempMax}° L:${tempMin}°</div>
                         </div>
-                        <div style="font-size: 12px; color: #B0E0E6; font-weight: bold;">${rainChance}% • ${rainAmount}mm</div>
+                        <div style="font-size: 12px; color: #B0E0E6; font-weight: bold;">${avgRainChance}% • ${totalRainAmount}mm</div>
                     `;
                     forecastContainer.appendChild(dayDiv);
                 });
@@ -408,51 +429,8 @@
                 
                 console.log('Basic weather info updated');
                 
-                // Forecast - group by actual different days (excluding today)
-                const forecastContainer = document.getElementById('forecast');
-                forecastContainer.innerHTML = '';
-                
-                // Get one forecast per day starting from tomorrow
-                const dailyForecasts = [];
-                const today = new Date().toDateString();
-                const seenDays = new Set([today]); // Exclude today
-                
-                for (const item of forecast.list) {
-                    const date = new Date(item.dt * 1000);
-                    const dayKey = date.toDateString();
-                    
-                    if (!seenDays.has(dayKey) && dailyForecasts.length < 4) {
-                        seenDays.add(dayKey);
-                        dailyForecasts.push(item);
-                    }
-                }
-                
-                dailyForecasts.forEach((item) => {
-                    const date = new Date(item.dt * 1000);
-                    const day = date.toLocaleDateString('en-US', { weekday: 'short' });
-                    const temp = Math.round(item.main.temp);
-                    const tempMax = Math.round(item.main.temp_max);
-                    const tempMin = Math.round(item.main.temp_min);
-                    const condition = item.weather[0].main;
-                    const iconSrc = getWeatherIcon(condition.toLowerCase());
-                    
-                    // Get rain data
-                    const rainChance = item.pop ? Math.round(item.pop * 100) : 0;
-                    const rainAmount = item.rain ? (item.rain['3h'] || 0).toFixed(1) : '0.0';
-                    
-                    const dayDiv = document.createElement('div');
-                    dayDiv.className = 'forecast-day';
-                    dayDiv.innerHTML = `
-                        <div>${day}</div>
-                        <img src="${iconSrc}" alt="${condition}" style="width: 40px; height: 40px;">
-                        <div class="forecast-temp-group">
-                            <div class="forecast-temp">${temp}°</div>
-                            <div style="font-size: 11px; color: #B0E0E6;">H:${tempMax}° L:${tempMin}°</div>
-                        </div>
-                        <div style="font-size: 12px; color: #B0E0E6; font-weight: bold;">${rainChance}% • ${rainAmount}mm</div>
-                    `;
-                    forecastContainer.appendChild(dayDiv);
-                });
+                // Update forecast display using the dedicated function
+                updateForecastDisplay(forecast);
                 
                 // Create temperature chart
                 createTempChart(forecast);
@@ -643,7 +621,7 @@
         
         // Update every 5 minutes
         setInterval(fetchWeather, 300000);  // 5 minutes
-        setInterval(updateDateTime, 60000); // 1 minute
+        setInterval(updateDateTime, 30000); // 30 seconds
     </script>
 </body>
 </html>

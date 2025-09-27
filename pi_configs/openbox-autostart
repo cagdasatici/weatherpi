@@ -1,0 +1,24 @@
+# Power management settings
+xset -dpms
+xset s off 
+xset s noblank
+
+# Professional kiosk appearance
+xsetroot -solid black
+
+# System readiness
+sleep 3
+
+# Clean slate
+pkill -f firefox-esr || true
+
+# Launch Firefox with ChatGPT-style simplicity but our proven flags
+firefox-esr --kiosk http://localhost/weather.html &
+
+# Monitor and restart if needed
+while true; do
+    sleep 30
+    if ! pgrep -f firefox-esr > /dev/null; then
+        firefox-esr --kiosk http://localhost/weather.html &
+    fi
+done &
