@@ -1,0 +1,4 @@
+kivy
+requests
+numpy
+kivy-garden.graph

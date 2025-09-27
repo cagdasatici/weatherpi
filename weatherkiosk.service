@@ -1,0 +1,16 @@
+[Unit]
+Description=Weather Kiosk Application
+After=network.target
+
+[Service]
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+Environment=OWM_API_KEY=your_api_key_here
+User=pi
+WorkingDirectory=/home/pi/weatherpi
+ExecStart=/usr/bin/python3 /home/pi/weatherpi/main.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target
