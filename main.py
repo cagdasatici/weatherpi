@@ -97,24 +97,52 @@ class WeatherPage(Screen):
             if 'list' not in forecast or not forecast['list']:
                 raise ValueError("Invalid forecast data structure")
             
-            # Update current conditions safely
+            # Update current conditions safely with individual try/catch blocks
             main_data = current['main']
             weather_data = current['weather'][0]
             
-            self.current_temp = f"{int(main_data.get('temp', 0))}°"
-            self.feels_like = f"Feels like {int(main_data.get('feels_like', 0))}°"
-            self.min_temp = f"↓{int(main_data.get('temp_min', 0))}°"
-            self.max_temp = f"↑{int(main_data.get('temp_max', 0))}°"
-            self.condition = weather_data.get('main', 'Unknown')
+            try:
+                self.current_temp = f"{int(main_data.get('temp', 0))}°"
+            except Exception:
+                self.current_temp = "--°"
+                
+            try:
+                self.feels_like = f"Feels like {int(main_data.get('feels_like', 0))}°"
+            except Exception:
+                self.feels_like = "Feels like --°"
+                
+            try:
+                self.min_temp = f"↓{int(main_data.get('temp_min', 0))}°"
+            except Exception:
+                self.min_temp = "↓--°"
+                
+            try:
+                self.max_temp = f"↑{int(main_data.get('temp_max', 0))}°"
+            except Exception:
+                self.max_temp = "↑--°"
+                
+            try:
+                self.condition = weather_data.get('main', 'Unknown')
+            except Exception:
+                self.condition = 'Unknown'
             
             # Ensure weather icon is always valid
-            icon_name = self.get_weather_icon(self.condition)
-            self.weather_icon = icon_name if icon_name and icon_name.strip() else 'cloud'
+            try:
+                icon_name = self.get_weather_icon(self.condition)
+                self.weather_icon = icon_name if icon_name and icon_name.strip() else 'cloud'
+            except Exception:
+                self.weather_icon = 'cloud'
             
-            self.date_time = datetime.now().strftime("%A, %B %d  %H:%M")
+            try:
+                self.date_time = datetime.now().strftime("%A, %B %d  %H:%M")
+            except Exception:
+                self.date_time = "Date/Time Error"
             
-            # Update forecast graph
-            self.update_forecast_graph(forecast)
+            # Update forecast graph (safely)
+            try:
+                self.update_forecast_graph(forecast)
+            except Exception as e:
+                logging.error(f"Error updating forecast: {e}")
             
             logging.info("Weather update completed successfully")
             
@@ -171,7 +199,7 @@ class WeatherPage(Screen):
             raise
 
     def update_forecast_graph(self, forecast):
-        """Update forecast cards with simplified error handling (skip graph for stability)"""
+        """Update forecast cards only (skip graph completely for maximum stability)"""
         try:
             if 'list' not in forecast or not forecast['list']:
                 logging.warning("No forecast data available")
@@ -225,7 +253,7 @@ class WeatherPage(Screen):
                         'rain_chance': '0%'
                     })
 
-            logging.info(f"Updated forecast data with {len(self.forecast_data)} items")
+            logging.info(f"Updated forecast data with {len(self.forecast_data)} items (graph disabled for stability)")
 
         except Exception as e:
             logging.error(f"Error in update_forecast_graph: {e}", exc_info=True)
