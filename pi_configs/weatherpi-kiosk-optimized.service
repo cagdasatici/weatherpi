@@ -1,0 +1,51 @@
+[Unit]
+Description=WeatherPi Headless Kiosk (WiFi-only, Maximum Reliability)
+After=network-online.target
+Wants=network-online.target
+Requires=graphical.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi
+
+# Set environment for minimal X11 session
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+
+# Firefox optimizations for 512MB RAM + WiFi-only
+Environment=MOZ_USE_XINPUT2=1
+Environment=MOZ_DISABLE_RDD_SANDBOX=1
+Environment=MOZ_DISABLE_CONTENT_SANDBOX=1
+Environment=MOZ_DISABLE_GMP_SANDBOX=1
+Environment=MOZ_FORCE_DISABLE_E10S=1
+
+# Memory and performance optimizations
+Environment=MOZ_MEMORY_INFO_DUMPER=0
+Environment=MOZ_WIN_NO_JUMP_LISTS=1
+Environment=MOZ_DISABLE_AUTO_SAFE_MODE=1
+
+# Start minimal window manager first, then Firefox
+ExecStartPre=/bin/sleep 10
+ExecStartPre=/usr/bin/matchbox-window-manager -use_titlebar no -use_desktop_mode plain &
+ExecStart=/usr/bin/firefox-esr --kiosk --disable-web-security --disable-features=VizDisplayCompositor --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --no-sandbox --disable-dev-shm-usage --memory-pressure-off --max_old_space_size=200 --disable-background-networking --disable-default-apps --disable-extensions --disable-sync --disable-plugins --disable-images=false --disable-java --disable-javascript=false --no-first-run --disable-translate --disable-infobars --disable-notifications --no-default-browser-check --disable-save-password-bubble http://localhost/weather.html
+
+# Restart policy for maximum reliability
+Restart=always
+RestartSec=10
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Resource limits for stability
+LimitNOFILE=1024
+LimitNPROC=100
+MemoryMax=300M
+CPUQuota=80%
+
+# Auto-restart if memory usage gets too high
+WatchdogSec=60
+
+[Install]
+WantedBy=graphical.target
