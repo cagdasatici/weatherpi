@@ -29,7 +29,7 @@ if not API_KEY:
 
 URL_CURRENT = "https://api.openweathermap.org/data/2.5/weather"
 URL_FORECAST = "https://api.openweathermap.org/data/2.5/forecast"
-REFRESH_SEC = 300  # 5 minutes
+REFRESH_SEC = 600  # 10 minutes for better stability
 
 class ForecastCard(BoxLayout):
     date = StringProperty('')
@@ -171,20 +171,12 @@ class WeatherPage(Screen):
             raise
 
     def update_forecast_graph(self, forecast):
-        """Update forecast graph and cards with proper error handling"""
-        if not self.forecast_graph:
-            logging.warning("Forecast graph not available, skipping graph update")
-            return
-
+        """Update forecast cards with simplified error handling (skip graph for stability)"""
         try:
             if 'list' not in forecast or not forecast['list']:
-                logging.error("No forecast data available")
+                logging.warning("No forecast data available")
                 self.forecast_data = []
                 return
-
-            temps = []
-            rains = []
-            times = []
 
             # Clear previous forecast data
             self.forecast_data = []
@@ -199,10 +191,6 @@ class WeatherPage(Screen):
                     rain = item.get('rain', {}).get('3h', 0)
                     weather_list = item.get('weather', [{}])
                     weather_main = weather_list[0].get('main', 'Clouds') if weather_list else 'Clouds'
-                    
-                    temps.append(temp)
-                    rains.append(rain)
-                    times.append(i)
 
                     # Update forecast cards data
                     try:
@@ -214,7 +202,7 @@ class WeatherPage(Screen):
                     condition = weather_main
                     icon_name = self.get_weather_icon(condition)
                     
-                    # Ensure icon name is never empty
+                    # Triple-check icon name is never empty
                     if not icon_name or not icon_name.strip():
                         icon_name = 'cloud'
                         
@@ -228,7 +216,7 @@ class WeatherPage(Screen):
                     
                 except Exception as e:
                     logging.error(f"Error processing forecast item {i}: {e}")
-                    # Add fallback data for this item
+                    # Add safe fallback data for this item
                     self.forecast_data.append({
                         'date': f"Day {i+1}",
                         'temp': '--',
@@ -237,65 +225,58 @@ class WeatherPage(Screen):
                         'rain_chance': '0%'
                     })
 
-            # Update graphs only if we have valid data
-            if temps and times:
-                try:
-                    # Update temperature plot
-                    if not self.temp_plot:
-                        self.temp_plot = SmoothLinePlot(color=[1, 0.6, 0.2, 1])
-                        self.forecast_graph.add_plot(self.temp_plot)
-                    self.temp_plot.points = [(x, y) for x, y in zip(times, temps)]
-                    
-                    # Update rain plot
-                    if not self.rain_plot:
-                        self.rain_plot = SmoothLinePlot(color=[0.4, 0.8, 1, 0.5])
-                        self.forecast_graph.add_plot(self.rain_plot)
-                    self.rain_plot.points = [(x, y*10) for x, y in zip(times, rains)]  # Scale rain for visibility
-                    
-                    # Update graph range
-                    if temps:
-                        self.forecast_graph.ymin = max(min(temps) - 5, -20)  # Don't go below -20
-                        self.forecast_graph.ymax = min(max(temps) + 5, 50)   # Don't go above 50
-                        
-                    logging.info(f"Updated forecast graph with {len(temps)} data points")
-                    
-                except Exception as e:
-                    logging.error(f"Error updating forecast graph: {e}")
+            logging.info(f"Updated forecast data with {len(self.forecast_data)} items")
 
         except Exception as e:
             logging.error(f"Error in update_forecast_graph: {e}", exc_info=True)
-            self.forecast_data = []
+            # Provide safe fallback data
+            self.forecast_data = [
+                {'date': 'Mon', 'temp': '--', 'condition': 'Unknown', 'icon': 'cloud', 'rain_chance': '0%'},
+                {'date': 'Tue', 'temp': '--', 'condition': 'Unknown', 'icon': 'cloud', 'rain_chance': '0%'},
+                {'date': 'Wed', 'temp': '--', 'condition': 'Unknown', 'icon': 'cloud', 'rain_chance': '0%'},
+                {'date': 'Thu', 'temp': '--', 'condition': 'Unknown', 'icon': 'cloud', 'rain_chance': '0%'},
+                {'date': 'Fri', 'temp': '--', 'condition': 'Unknown', 'icon': 'cloud', 'rain_chance': '0%'}
+            ]
 
     def get_weather_icon(self, condition):
-        """Get weather icon name with validation that the file exists"""
-        icon_map = {
-            "Clear": "sun",
-            "Clouds": "cloud",
-            "Rain": "rain",
-            "Drizzle": "drizzle",
-            "Thunderstorm": "storm",
-            "Snow": "snow",
-            "Mist": "fog",
-            "Fog": "fog",
-            "Wind": "wind"
-        }
-        
-        if not condition or not isinstance(condition, str):
-            return "cloud"
-        
-        icon_name = icon_map.get(condition, "cloud")
-        
-        if not icon_name or icon_name.strip() == "":
-            logging.warning("Weather icon name was empty, using 'cloud' as fallback.")
-            return "cloud"
-        
-        # Validate that the icon file exists
-        icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.png')
-        if not os.path.exists(icon_path):
-            logging.warning(f"Icon file not found: {icon_path}, using 'cloud' as fallback.")
-            return "cloud"
-        
-        return icon_name
+        """Get the icon filename for a weather condition with bulletproof validation"""
+        try:
+            # Map weather conditions to icon files with safe fallback
+            weather_icons = {
+                'Thunderstorm': 'storm',
+                'Drizzle': 'drizzle',
+                'Rain': 'rain',
+                'Snow': 'snow',
+                'Mist': 'mist',
+                'Fog': 'fog',
+                'Clear': 'sun',
+                'Clouds': 'cloud'
+            }
+            
+            # Get icon name, default to cloud
+            icon_name = weather_icons.get(str(condition), 'cloud')
+            
+            # Build full path and verify
+            icon_path = os.path.join('icons', f'{icon_name}.png')
+            full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), icon_path)
+            
+            # Check if file exists
+            if os.path.exists(full_path):
+                return icon_name
+            else:
+                logging.warning(f"Icon not found: {icon_path}, using fallback")
+                # Try cloud.png as fallback
+                cloud_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icons', 'cloud.png')
+                if os.path.exists(cloud_path):
+                    return 'cloud'
+                else:
+                    # Return empty to let Kivy handle gracefully
+                    logging.error("Even fallback icon cloud.png not found!")
+                    return ''
+                    
+        except Exception as e:
+            logging.error(f"Error in get_weather_icon: {e}")
+            return 'cloud'
 
 class CalendarPage(Screen):
     pass
@@ -336,8 +317,8 @@ class WeatherKioskApp(App):
         sm.add_widget(CalendarPage(name='calendar'))
         sm.add_widget(BlankPage(name='blank'))
         
-        # Start weather updates immediately and schedule recurring updates
-        Clock.schedule_once(weather_page.update_weather, 1)
+        # Start weather updates after UI is fully loaded and schedule recurring updates
+        Clock.schedule_once(weather_page.update_weather, 5)  # Wait 5 seconds for UI to load
         Clock.schedule_interval(weather_page.update_weather, REFRESH_SEC)
         
         return sm
