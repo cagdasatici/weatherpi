@@ -213,9 +213,44 @@
         #tempChart {
             max-height: 150px;
         }
+        
+        .cache-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            color: #FFE4B5;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.85;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cache-indicator:hover {
+            opacity: 1;
+        }
+        
+        .cache-indicator .icon {
+            font-size: 16px;
+        }
+        
+        .cache-indicator .text {
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
+    <!-- Cache indicator -->
+    <div id="cacheIndicator" class="cache-indicator">
+        <span class="icon">📶</span>
+        <span class="text" id="cacheIndicatorText">Using cached data</span>
+    </div>
+    
     <div class="main-weather">
         <div class="weather-main">
             <img id="weatherIcon" class="weather-icon" src="icons/sun.png" alt="Weather" style="display: none;">
@@ -245,6 +280,67 @@
         const API_KEY = '98cea08ababd57c4fa475e6481b6f4c0';
         const LAT = 52.3008;
         const LON = 4.8639;
+        
+        // Cache for last successful weather data
+        let lastWeatherData = null;
+        let lastForecastData = null;
+        let lastUpdateTime = null;
+        
+        // Cache indicator functions
+        function showCacheIndicator(ageMinutes = null) {
+            const indicator = document.getElementById('cacheIndicator');
+            const text = document.getElementById('cacheIndicatorText');
+            
+            if (indicator && text) {
+                if (ageMinutes && ageMinutes > 0) {
+                    if (ageMinutes < 60) {
+                        text.textContent = `Data ${ageMinutes}m old`;
+                    } else {
+                        const hours = Math.floor(ageMinutes / 60);
+                        text.textContent = `Data ${hours}h old`;
+                    }
+                } else {
+                    text.textContent = 'Using cached data';
+                }
+                indicator.style.display = 'flex';
+            }
+        }
+        
+        function hideCacheIndicator() {
+            const indicator = document.getElementById('cacheIndicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        // Load cached data from localStorage on startup
+        function loadCachedData() {
+            try {
+                const cached = localStorage.getItem('weatherCache');
+                if (cached) {
+                    const data = JSON.parse(cached);
+                    lastWeatherData = data.weather;
+                    lastForecastData = data.forecast;
+                    lastUpdateTime = new Date(data.timestamp);
+                    console.log('Loaded cached weather data from', lastUpdateTime.toLocaleString());
+                }
+            } catch (error) {
+                console.warn('Failed to load cached data:', error);
+            }
+        }
+        
+        // Save successful data to localStorage
+        function saveCachedData() {
+            try {
+                localStorage.setItem('weatherCache', JSON.stringify({
+                    weather: lastWeatherData,
+                    forecast: lastForecastData,
+                    timestamp: lastUpdateTime
+                }));
+            } catch (error) {
+                console.warn('Failed to save cached data:', error);
+            }
+        }
         
         function updateDateTime() {
             try {
@@ -294,6 +390,11 @@
                 
                 const currentData = await currentResponse.json();
                 
+                // Cache successful data
+                lastWeatherData = currentData;
+                lastUpdateTime = new Date();
+                saveCachedData();
+                
                 // Update current weather
                 document.getElementById('currentTemp').textContent = `${Math.round(currentData.main.temp)}°`;
                 document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(currentData.main.feels_like)}°`;
@@ -315,15 +416,50 @@
                 
                 const forecastData = await forecastResponse.json();
                 
+                // Cache successful forecast data
+                lastForecastData = forecastData;
+                saveCachedData();
+                
                 // Update forecast display and chart
                 updateForecastDisplay(forecastData);
                 createTempChart(forecastData);
+                
+                // Hide cache indicator since we have fresh data
+                hideCacheIndicator();
                 
                 console.log('=== Weather update completed successfully ===');
                 
             } catch (error) {
                 console.error('Error fetching weather:', error);
-                showError('Unable to fetch weather data');
+                
+                // Try to use cached data instead of showing error
+                if (lastWeatherData && lastForecastData) {
+                    console.log('Using cached weather data due to network error');
+                    
+                    // Show cached current weather
+                    document.getElementById('currentTemp').textContent = `${Math.round(lastWeatherData.main.temp)}°`;
+                    document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(lastWeatherData.main.feels_like)}°`;
+                    document.getElementById('minMax').textContent = `H: ${Math.round(lastWeatherData.main.temp_max)}° L: ${Math.round(lastWeatherData.main.temp_min)}°`;
+                    
+                    // Update weather icon
+                    const iconElement = document.getElementById('weatherIcon');
+                    const iconSrc = getWeatherIcon(lastWeatherData.weather[0].main.toLowerCase());
+                    iconElement.src = iconSrc;
+                    iconElement.style.display = 'block';
+                    
+                    // Show cached forecast
+                    updateForecastDisplay(lastForecastData);
+                    createTempChart(lastForecastData);
+                    
+                    // Show cache indicator with age information
+                    const ageMinutes = Math.floor((new Date() - lastUpdateTime) / 60000);
+                    showCacheIndicator(ageMinutes);
+                    
+                    console.log(`Using ${ageMinutes} minute old cached data`);
+                } else {
+                    // Only show error if no cached data available
+                    showError('Unable to fetch weather data');
+                }
             }
         }
         
@@ -623,16 +759,44 @@
         
         function showError(message) {
             console.error('showError called with:', message);
-            document.getElementById('currentTemp').textContent = '--°';
-            document.getElementById('feelsLike').textContent = '🌡️ Feels like --°';
-            const forecastElement = document.getElementById('forecast');
-            if (forecastElement) {
-                forecastElement.innerHTML = `<div class="error">Please check network connection</div>`;
+            // Only show error UI if no previous data exists
+            if (!lastWeatherData) {
+                document.getElementById('currentTemp').textContent = '--°';
+                document.getElementById('feelsLike').textContent = '🌡️ Feels like --°';
+                document.getElementById('minMax').textContent = 'H: --° L: --°';
+                const forecastElement = document.getElementById('forecast');
+                if (forecastElement) {
+                    forecastElement.innerHTML = `<div class="error">Loading weather data...</div>`;
+                }
             }
+            // If we have cached data, keep showing it silently
         }
         
         // Initialize
         console.log('Starting weather app initialization...');
+        
+        // Load any cached data first
+        loadCachedData();
+        
+        // Show cached data immediately if available
+        if (lastWeatherData && lastForecastData) {
+            console.log('Displaying cached data while fetching updates...');
+            document.getElementById('currentTemp').textContent = `${Math.round(lastWeatherData.main.temp)}°`;
+            document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(lastWeatherData.main.feels_like)}°`;
+            document.getElementById('minMax').textContent = `H: ${Math.round(lastWeatherData.main.temp_max)}° L: ${Math.round(lastWeatherData.main.temp_min)}°`;
+            
+            const iconElement = document.getElementById('weatherIcon');
+            const iconSrc = getWeatherIcon(lastWeatherData.weather[0].main.toLowerCase());
+            iconElement.src = iconSrc;
+            iconElement.style.display = 'block';
+            
+            updateForecastDisplay(lastForecastData);
+            createTempChart(lastForecastData);
+            
+            // Show cache indicator with age information
+            const ageMinutes = Math.floor((new Date() - lastUpdateTime) / 60000);
+            showCacheIndicator(ageMinutes);
+        }
         
         // Cursor hiding for kiosk mode
         let cursorTimer;
