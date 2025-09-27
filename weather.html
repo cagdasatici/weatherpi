@@ -476,15 +476,23 @@
         function createTempChart(forecast) {
             const ctx = document.getElementById('tempChart').getContext('2d');
             
-            // Filter to only future data points
+            // Clear any existing chart
+            Chart.getChart(ctx)?.destroy();
+            
+            // Filter to only future data points (from now onwards)
             const now = new Date();
             const futureData = forecast.list.filter(item => {
                 const itemDate = new Date(item.dt * 1000);
-                return itemDate > now;
+                return itemDate >= now;
             });
             
             // Get next 24 hours of future data (8 data points * 3 hours = 24 hours)
             const next24Hours = futureData.slice(0, 8);
+            
+            if (next24Hours.length === 0) {
+                console.warn('No future weather data available for chart');
+                return;
+            }
             
             const labels = next24Hours.map(item => {
                 const date = new Date(item.dt * 1000);
@@ -493,6 +501,17 @@
             
             const temps = next24Hours.map(item => Math.round(item.main.temp));
             const rainData = next24Hours.map(item => item.rain ? item.rain['3h'] || 0 : 0);
+            
+            // Calculate temperature range for proper scaling
+            const minTemp = Math.min(...temps);
+            const maxTemp = Math.max(...temps);
+            const tempRange = maxTemp - minTemp;
+            const padding = Math.max(2, tempRange * 0.1); // At least 2 degrees padding
+            
+            const yAxisMin = Math.floor(minTemp - padding);
+            const yAxisMax = Math.ceil(maxTemp + padding);
+            
+            console.log(`Chart data: ${next24Hours.length} points, temp range: ${minTemp}° to ${maxTemp}°, y-axis: ${yAxisMin}° to ${yAxisMax}°`);
             
             new Chart(ctx, {
                 type: 'line',
@@ -557,13 +576,20 @@
                             type: 'linear',
                             display: true,
                             position: 'left',
-                            ticks: { color: '#FFD700', font: { size: 14 } },
+                            min: yAxisMin,
+                            max: yAxisMax,
+                            ticks: { 
+                                color: '#FFD700', 
+                                font: { size: 14 },
+                                stepSize: Math.max(1, Math.ceil(tempRange / 5))
+                            },
                             grid: { color: 'rgba(255,255,255,0.1)' }
                         },
                         y1: {
                             type: 'linear',
                             display: true,
                             position: 'right',
+                            min: 0,
                             ticks: { color: '#74b9ff', font: { size: 14 } },
                             grid: { drawOnChartArea: false }
                         }
