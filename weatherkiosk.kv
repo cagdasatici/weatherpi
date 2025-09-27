@@ -31,7 +31,7 @@
             size_hint_y: None
             height: dp(18)
         Image:
-            source: f'icons/{root.icon}.png'
+            source: f'icons/{root.icon if root.icon else "cloud"}.png'
             size_hint_y: None
             height: dp(36)
         Label:
@@ -91,7 +91,7 @@
                         valign: 'top'
                     
                     Image:
-                        source: f'icons/{root.weather_icon}.png'
+                        source: f'icons/{root.weather_icon if root.weather_icon else "cloud"}.png'
                         size_hint_x: 0.3
             
             BoxLayout:

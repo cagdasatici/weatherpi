@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/pi/.Xauthority
-Environment=OWM_API_KEY=your_api_key_here
+Environment=OWM_API_KEY=98cea08ababd57c4fa475e6481b6f4c0
 User=pi
 WorkingDirectory=/home/pi/weatherpi
 ExecStart=/usr/bin/python3 /home/pi/weatherpi/main.py
