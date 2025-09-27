@@ -11,9 +11,10 @@ ssh weatherpi 'sudo cp /tmp/weather.html /var/www/html/ && sudo chmod 644 /var/w
 scp -r icons/ weatherpi:/tmp/
 ssh weatherpi 'sudo cp -r /tmp/icons /var/www/html/ && sudo chmod -R 755 /var/www/html/icons && sudo chown -R www-data:www-data /var/www/html/icons'
 
-# Copy kiosk script
-scp simple_kiosk.sh weatherpi:/home/cagdas/
+# Copy systemd service
+scp weatherpi-kiosk.service weatherpi:/tmp/
+ssh weatherpi 'sudo cp /tmp/weatherpi-kiosk.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable weatherpi-kiosk.service'
 
 echo "✅ Deployment complete!"
 echo "📱 Web: http://192.168.178.36/weather.html"
-echo "🖥️  Kiosk: ssh weatherpi './simple_kiosk.sh'"
+echo "🖥️  Kiosk: ssh weatherpi 'sudo systemctl restart weatherpi-kiosk.service'"
