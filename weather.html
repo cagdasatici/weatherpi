@@ -7,7 +7,18 @@
     <style>
         body {
             margin: 0;
-            padding: 15px;
+               const dateStr = now.toLocaleDateString('en-US', dateOptions);
+            const timeStr = now.toLocaleTimeString('en-US', timeOptions);
+            
+            // Add time emoji based on hour
+            const hour = now.getHours();
+            let timeEmoji = '🕐';
+            if (hour >= 6 && hour < 12) timeEmoji = '🌅';
+            else if (hour >= 12 && hour < 18) timeEmoji = '☀️';
+            else if (hour >= 18 && hour < 21) timeEmoji = '🌇';
+            else timeEmoji = '🌙';
+            
+            document.getElementById('datetime').innerHTML = `${timeEmoji} ${dateStr} ${timeStr}`;      padding: 15px;
             background: linear-gradient(135deg, #74b9ff, #0984e3);
             color: white;
             font-family: 'Arial', sans-serif;
@@ -115,6 +126,20 @@
             gap: 15px;
         }
         
+        .temp-section {
+            text-align: left;
+        }
+        
+        .temp-section .current-temp {
+            margin: 0 0 5px 0;
+        }
+        
+        .temp-section .min-max {
+            font-size: 18px;
+            color: #B0E0E6;
+            font-weight: 500;
+        }
+        
         .middle-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -136,14 +161,37 @@
             flex: 1;
         }
         
+        .forecast-temp-group {
+            margin: 5px 0;
+        }
+        
+        .forecast-temp {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
         .charts {
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 10px;
             padding: 15px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .charts:hover {
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        .weather-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .weather-icon:hover {
+            transform: scale(1.05);
         }
         
         #tempChart {
-            max-height: 120px;
+            max-height: 150px;
         }
     </style>
 </head>
@@ -151,11 +199,13 @@
     <div class="main-weather">
         <div class="weather-main">
             <img id="weatherIcon" class="weather-icon" src="icons/sun.png" alt="Weather" style="display: none;">
-            <h1 class="current-temp" id="currentTemp">--°</h1>
+            <div class="temp-section">
+                <h1 class="current-temp" id="currentTemp">--°</h1>
+                <div class="min-max" id="minMax">H: --° L: --°</div>
+            </div>
         </div>
         <div class="details">
             <div class="datetime" id="datetime">Loading...</div>
-            <div class="min-max" id="minMax">--° / --°</div>
         </div>
     </div>
     
@@ -164,7 +214,7 @@
             <div class="loading">Loading forecast...</div>
         </div>
         <div class="charts">
-            <canvas id="tempChart" width="400" height="120"></canvas>
+            <canvas id="tempChart" width="400" height="150"></canvas>
         </div>
     </div>
 
@@ -176,40 +226,78 @@
         const LON = 4.8639;
         
         function updateDateTime() {
-            const now = new Date();
-            const dateOptions = { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric'
-            };
-            const timeOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            };
-            const dateStr = now.toLocaleDateString('en-US', dateOptions);
-            const timeStr = now.toLocaleTimeString('en-US', timeOptions);
-            document.getElementById('datetime').textContent = `${dateStr} ${timeStr}`;
+            try {
+                const now = new Date();
+                console.log('Current time:', now);
+                
+                const dateOptions = { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric'
+                };
+                const timeOptions = {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                };
+                const dateStr = now.toLocaleDateString('en-US', dateOptions);
+                const timeStr = now.toLocaleTimeString('en-US', timeOptions);
+                
+                console.log('Formatted date:', dateStr, 'time:', timeStr);
+                
+                const datetimeElement = document.getElementById('datetime');
+                console.log('Datetime element:', datetimeElement);
+                
+                if (datetimeElement) {
+                    datetimeElement.textContent = `${dateStr} ${timeStr}`;
+                    console.log('DateTime updated successfully');
+                } else {
+                    console.error('Could not find datetime element');
+                }
+            } catch (error) {
+                console.error('Error updating datetime:', error);
+            }
         }
         
         async function fetchWeather() {
             try {
-                console.log('Fetching weather data...');
+                console.log('=== Starting fetchWeather ===');
                 
                 // Fetch current weather
-                const currentResponse = await fetch(
-                    `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`
-                );
+                const currentURL = `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
+                const currentResponse = await fetch(currentURL);
+                
+                if (!currentResponse.ok) {
+                    throw new Error(`Current weather API returned ${currentResponse.status}`);
+                }
+                
                 const currentData = await currentResponse.json();
                 
+                // Update current weather
+                document.getElementById('currentTemp').textContent = `${Math.round(currentData.main.temp)}°`;
+                document.getElementById('minMax').textContent = `H: ${Math.round(currentData.main.temp_max)}° L: ${Math.round(currentData.main.temp_min)}°`;
+                
+                // Update weather icon
+                const iconElement = document.getElementById('weatherIcon');
+                const iconSrc = getWeatherIcon(currentData.weather[0].main.toLowerCase());
+                iconElement.src = iconSrc;
+                iconElement.style.display = 'block';
+                
                 // Fetch forecast
-                const forecastResponse = await fetch(
-                    `https://api.openweathermap.org/data/2.5/forecast?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`
-                );
+                const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
+                const forecastResponse = await fetch(forecastURL);
+                
+                if (!forecastResponse.ok) {
+                    throw new Error(`Forecast API returned ${forecastResponse.status}`);
+                }
+                
                 const forecastData = await forecastResponse.json();
                 
-                updateWeatherDisplay(currentData, forecastData);
-                console.log('Weather data updated successfully');
+                // Update forecast display and chart
+                updateForecastDisplay(forecastData);
+                createTempChart(forecastData);
+                
+                console.log('=== Weather update completed successfully ===');
                 
             } catch (error) {
                 console.error('Error fetching weather:', error);
@@ -217,59 +305,153 @@
             }
         }
         
-        function updateWeatherDisplay(current, forecast) {
-            // Current weather
-            document.getElementById('currentTemp').textContent = `${Math.round(current.main.temp)}°`;
-            
-            // Update weather icon
-            const iconElement = document.getElementById('weatherIcon');
-            const iconSrc = getWeatherIcon(current.weather[0].main.toLowerCase());
-            iconElement.src = iconSrc;
-            iconElement.style.display = 'block';
-            
-            // Forecast - group by actual different days (excluding today)
-            const forecastContainer = document.getElementById('forecast');
-            forecastContainer.innerHTML = '';
-            
-            // Get one forecast per day starting from tomorrow
-            const dailyForecasts = [];
-            const today = new Date().toDateString();
-            const seenDays = new Set([today]); // Exclude today
-            
-            for (const item of forecast.list) {
-                const date = new Date(item.dt * 1000);
-                const dayKey = date.toDateString();
+        function updateForecastDisplay(forecast) {
+            try {
+                console.log('=== Starting updateForecastDisplay ===');
                 
-                if (!seenDays.has(dayKey) && dailyForecasts.length < 4) {
-                    seenDays.add(dayKey);
-                    dailyForecasts.push(item);
+                const forecastContainer = document.getElementById('forecast');
+                if (!forecastContainer) {
+                    console.error('Forecast container not found!');
+                    return;
+                }
+                
+                if (!forecast.list || !Array.isArray(forecast.list)) {
+                    console.error('Invalid forecast data');
+                    forecastContainer.innerHTML = '<div class="error">Invalid forecast data</div>';
+                    return;
+                }
+                
+                // Clear the container
+                forecastContainer.innerHTML = '';
+                
+                // Get one forecast per day starting from tomorrow  
+                const dailyForecasts = [];
+                const today = new Date().toDateString();
+                const seenDays = new Set([today]); // Exclude today
+                
+                // Find future forecast items for different days
+                for (const item of forecast.list) {
+                    const date = new Date(item.dt * 1000);
+                    const dayKey = date.toDateString();
+                    
+                    if (!seenDays.has(dayKey) && dailyForecasts.length < 4) {
+                        seenDays.add(dayKey);
+                        dailyForecasts.push(item);
+                    }
+                }
+                
+                console.log('Found forecasts for', dailyForecasts.length, 'different days');
+                
+                // Create forecast cards
+                dailyForecasts.forEach((item) => {
+                    const date = new Date(item.dt * 1000);
+                    const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    const temp = Math.round(item.main.temp);
+                    const tempMax = Math.round(item.main.temp_max);
+                    const tempMin = Math.round(item.main.temp_min);
+                    const condition = item.weather[0].main;
+                    const iconSrc = getWeatherIcon(condition.toLowerCase());
+                    
+                    // Get rain data
+                    const rainChance = item.pop ? Math.round(item.pop * 100) : 0;
+                    const rainAmount = item.rain ? (item.rain['3h'] || 0).toFixed(1) : '0.0';
+                    
+                    const dayDiv = document.createElement('div');
+                    dayDiv.className = 'forecast-day';
+                    dayDiv.innerHTML = `
+                        <div>${day}</div>
+                        <img src="${iconSrc}" alt="${condition}" style="width: 40px; height: 40px;">
+                        <div class="forecast-temp-group">
+                            <div class="forecast-temp">${temp}°</div>
+                            <div style="font-size: 11px; color: #B0E0E6;">H:${tempMax}° L:${tempMin}°</div>
+                        </div>
+                        <div style="font-size: 12px; color: #B0E0E6; font-weight: bold;">${rainChance}% • ${rainAmount}mm</div>
+                    `;
+                    forecastContainer.appendChild(dayDiv);
+                });
+                
+                console.log('Forecast cards created successfully');
+                
+            } catch (error) {
+                console.error('Error in updateForecastDisplay:', error);
+                const forecastContainer = document.getElementById('forecast');
+                if (forecastContainer) {
+                    forecastContainer.innerHTML = `<div class="error">Display error: ${error.message}</div>`;
                 }
             }
-            
-            dailyForecasts.forEach((item) => {
-                const date = new Date(item.dt * 1000);
-                const day = date.toLocaleDateString('en-US', { weekday: 'short' });
-                const temp = Math.round(item.main.temp);
-                const condition = item.weather[0].main;
-                const iconSrc = getWeatherIcon(condition.toLowerCase());
+        }
+        
+        function updateWeatherDisplay(current, forecast) {
+            try {
+                console.log('Updating weather display with:', { current, forecast });
                 
-                // Get rain data
-                const rainChance = item.pop ? Math.round(item.pop * 100) : 0;
-                const rainAmount = item.rain ? (item.rain['3h'] || 0).toFixed(1) : '0.0';
+                // Current weather
+                document.getElementById('currentTemp').textContent = `${Math.round(current.main.temp)}°`;
+                document.getElementById('minMax').textContent = `H: ${Math.round(current.main.temp_max)}° L: ${Math.round(current.main.temp_min)}°`;
                 
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'forecast-day';
-                dayDiv.innerHTML = `
-                    <div>${day}</div>
-                    <img src="${iconSrc}" alt="${condition}" style="width: 40px; height: 40px;">
-                    <div class="forecast-temp">${temp}°</div>
-                    <div style="font-size: 12px; color: #B0E0E6; font-weight: bold;">${rainChance}% • ${rainAmount}mm</div>
-                `;
-                forecastContainer.appendChild(dayDiv);
-            });
-            
-            // Create temperature chart
-            createTempChart(forecast);
+                // Update weather icon
+                const iconElement = document.getElementById('weatherIcon');
+                const iconSrc = getWeatherIcon(current.weather[0].main.toLowerCase());
+                iconElement.src = iconSrc;
+                iconElement.style.display = 'block';
+                
+                console.log('Basic weather info updated');
+                
+                // Forecast - group by actual different days (excluding today)
+                const forecastContainer = document.getElementById('forecast');
+                forecastContainer.innerHTML = '';
+                
+                // Get one forecast per day starting from tomorrow
+                const dailyForecasts = [];
+                const today = new Date().toDateString();
+                const seenDays = new Set([today]); // Exclude today
+                
+                for (const item of forecast.list) {
+                    const date = new Date(item.dt * 1000);
+                    const dayKey = date.toDateString();
+                    
+                    if (!seenDays.has(dayKey) && dailyForecasts.length < 4) {
+                        seenDays.add(dayKey);
+                        dailyForecasts.push(item);
+                    }
+                }
+                
+                dailyForecasts.forEach((item) => {
+                    const date = new Date(item.dt * 1000);
+                    const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    const temp = Math.round(item.main.temp);
+                    const tempMax = Math.round(item.main.temp_max);
+                    const tempMin = Math.round(item.main.temp_min);
+                    const condition = item.weather[0].main;
+                    const iconSrc = getWeatherIcon(condition.toLowerCase());
+                    
+                    // Get rain data
+                    const rainChance = item.pop ? Math.round(item.pop * 100) : 0;
+                    const rainAmount = item.rain ? (item.rain['3h'] || 0).toFixed(1) : '0.0';
+                    
+                    const dayDiv = document.createElement('div');
+                    dayDiv.className = 'forecast-day';
+                    dayDiv.innerHTML = `
+                        <div>${day}</div>
+                        <img src="${iconSrc}" alt="${condition}" style="width: 40px; height: 40px;">
+                        <div class="forecast-temp-group">
+                            <div class="forecast-temp">${temp}°</div>
+                            <div style="font-size: 11px; color: #B0E0E6;">H:${tempMax}° L:${tempMin}°</div>
+                        </div>
+                        <div style="font-size: 12px; color: #B0E0E6; font-weight: bold;">${rainChance}% • ${rainAmount}mm</div>
+                    `;
+                    forecastContainer.appendChild(dayDiv);
+                });
+                
+                // Create temperature chart
+                createTempChart(forecast);
+                
+                console.log('Weather display update completed successfully');
+                
+            } catch (error) {
+                console.error('Error updating weather display:', error);
+                showError('Error displaying weather data');
+            }
         }
         
         function getWeatherIcon(condition) {
@@ -294,8 +476,15 @@
         function createTempChart(forecast) {
             const ctx = document.getElementById('tempChart').getContext('2d');
             
-            // Get next 24 hours of data (8 data points * 3 hours = 24 hours)
-            const next24Hours = forecast.list.slice(0, 8);
+            // Filter to only future data points
+            const now = new Date();
+            const futureData = forecast.list.filter(item => {
+                const itemDate = new Date(item.dt * 1000);
+                return itemDate > now;
+            });
+            
+            // Get next 24 hours of future data (8 data points * 3 hours = 24 hours)
+            const next24Hours = futureData.slice(0, 8);
             
             const labels = next24Hours.map(item => {
                 const date = new Date(item.dt * 1000);
@@ -311,7 +500,7 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: 'Temperature (°C)',
+                            label: '🌡️',
                             data: temps,
                             borderColor: '#FFD700',
                             backgroundColor: 'rgba(255, 215, 0, 0.1)',
@@ -322,19 +511,19 @@
                                 display: true,
                                 color: '#FFD700',
                                 font: {
-                                    size: 12,
+                                    size: 16,
                                     weight: 'bold'
                                 },
                                 formatter: function(value) {
                                     return Math.round(value) + '°';
                                 },
-                                anchor: 'end',
                                 align: 'top',
-                                offset: 4
+                                anchor: 'center',
+                                offset: 8
                             }
                         },
                         {
-                            label: 'Rain (mm)',
+                            label: '🌧️',
                             data: rainData,
                             borderColor: '#74b9ff',
                             backgroundColor: 'rgba(116, 185, 255, 0.3)',
@@ -353,10 +542,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            labels: {
-                                color: 'white',
-                                font: { size: 16 }
-                            }
+                            display: false  // Remove the legend boxes entirely
                         },
                         datalabels: {
                             display: false  // Default to false, individual datasets override
@@ -387,13 +573,34 @@
         }
         
         function showError(message) {
+            console.error('showError called with:', message);
             document.getElementById('currentTemp').textContent = '--°';
-            document.getElementById('forecast').innerHTML = '<div class="error">Please check network connection</div>';
+            const forecastElement = document.getElementById('forecast');
+            if (forecastElement) {
+                forecastElement.innerHTML = `<div class="error">Please check network connection</div>`;
+            }
         }
         
         // Initialize
+        console.log('Starting weather app initialization...');
         updateDateTime();
-        fetchWeather();
+        console.log('DateTime function called');
+        
+        fetchWeather().then(() => {
+            console.log('fetchWeather promise resolved');
+        }).catch(error => {
+            console.error('fetchWeather promise rejected:', error);
+        });
+        
+        console.log('fetchWeather called, setting up intervals...');
+        
+        // Test if DOM elements exist
+        console.log('DOM elements check:');
+        console.log('currentTemp:', document.getElementById('currentTemp'));
+        console.log('datetime:', document.getElementById('datetime')); 
+        console.log('forecast:', document.getElementById('forecast'));
+        console.log('weatherIcon:', document.getElementById('weatherIcon'));
+        console.log('minMax:', document.getElementById('minMax'));
         
         // Update every 5 minutes
         setInterval(fetchWeather, 300000);  // 5 minutes

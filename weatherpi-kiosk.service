@@ -1,0 +1,20 @@
+[Unit]
+Description=WeatherPi Kiosk Display
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+User=cagdas
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/cagdas/.Xauthority
+WorkingDirectory=/home/cagdas
+ExecStartPre=/bin/sleep 10
+ExecStart=/home/cagdas/simple_kiosk.sh
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=graphical-session.target
