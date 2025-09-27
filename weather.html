@@ -134,6 +134,14 @@
             margin: 0 0 5px 0;
         }
         
+        .temp-section .feels-like {
+            font-size: 16px;
+            color: #FFE4B5;
+            font-weight: 400;
+            margin-bottom: 3px;
+            opacity: 0.9;
+        }
+        
         .temp-section .min-max {
             font-size: 18px;
             color: #B0E0E6;
@@ -201,6 +209,7 @@
             <img id="weatherIcon" class="weather-icon" src="icons/sun.png" alt="Weather" style="display: none;">
             <div class="temp-section">
                 <h1 class="current-temp" id="currentTemp">--°</h1>
+                <div class="feels-like" id="feelsLike">🌡️ Feels like --°</div>
                 <div class="min-max" id="minMax">H: --° L: --°</div>
             </div>
         </div>
@@ -275,6 +284,7 @@
                 
                 // Update current weather
                 document.getElementById('currentTemp').textContent = `${Math.round(currentData.main.temp)}°`;
+                document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(currentData.main.feels_like)}°`;
                 document.getElementById('minMax').textContent = `H: ${Math.round(currentData.main.temp_max)}° L: ${Math.round(currentData.main.temp_min)}°`;
                 
                 // Update weather icon
@@ -387,6 +397,7 @@
                 
                 // Current weather
                 document.getElementById('currentTemp').textContent = `${Math.round(current.main.temp)}°`;
+                document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(current.main.feels_like)}°`;
                 document.getElementById('minMax').textContent = `H: ${Math.round(current.main.temp_max)}° L: ${Math.round(current.main.temp_min)}°`;
                 
                 // Update weather icon
@@ -601,6 +612,7 @@
         function showError(message) {
             console.error('showError called with:', message);
             document.getElementById('currentTemp').textContent = '--°';
+            document.getElementById('feelsLike').textContent = '🌡️ Feels like --°';
             const forecastElement = document.getElementById('forecast');
             if (forecastElement) {
                 forecastElement.innerHTML = `<div class="error">Please check network connection</div>`;
@@ -623,6 +635,7 @@
         // Test if DOM elements exist
         console.log('DOM elements check:');
         console.log('currentTemp:', document.getElementById('currentTemp'));
+        console.log('feelsLike:', document.getElementById('feelsLike'));
         console.log('datetime:', document.getElementById('datetime')); 
         console.log('forecast:', document.getElementById('forecast'));
         console.log('weatherIcon:', document.getElementById('weatherIcon'));
