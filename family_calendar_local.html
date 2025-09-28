@@ -125,21 +125,6 @@
             opacity: 0.6;
             margin-top: 10px;
         }
-        
-        .calendar-filter {
-            font-size: 18px;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
-            border: none;
-            color: white;
-            margin-left: 20px;
-        }
-        
-        .calendar-filter option {
-            background: #0984e3;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -148,10 +133,6 @@
             <div class="calendar-icon">📅</div>
             <div>
                 <div class="title-text">Family Calendar</div>
-                <select class="calendar-filter" id="calendarFilter">
-                    <option value="Family">👪 Family Only</option>
-                    <option value="all">📋 All Calendars</option>
-                </select>
             </div>
         </div>
         <div class="current-date" id="currentDate"></div>
@@ -231,29 +212,23 @@
             
             // Load events
             loadEvents();
-            
-            // Set up filter
-            document.getElementById('calendarFilter').addEventListener('change', loadEvents);
         }
         
         function loadEvents() {
-            const filterValue = document.getElementById('calendarFilter').value;
             const container = document.getElementById('eventsContainer');
             
-            console.log(`📅 Loading events with filter: ${filterValue}`);
+            console.log(`📅 Loading family events only...`);
             
             let events = CALENDAR_DATA.events;
             
-            // Apply filter
-            if (filterValue === 'Family') {
-                events = events.filter(event => event.calendar === 'Family');
-            }
+            // Always show family calendar only (no filter needed)
+            events = events.filter(event => event.calendar === 'Family');
             
             // Filter events from TODAY onwards only
             const today = new Date().toISOString().split('T')[0]; // 2025-09-28
             events = events.filter(event => event.display_date >= today);
             
-            console.log(`📍 Showing ${events.length} events from ${today} onwards`);
+            console.log(`📍 Showing ${events.length} family events from ${today} onwards`);
             
             // Sort events by date
             events.sort((a, b) => new Date(a.start) - new Date(b.start));

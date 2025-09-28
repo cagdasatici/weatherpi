@@ -296,7 +296,7 @@
         </div>
     </div>
     
-    <div class="swipe-hint">← Swipe left for Weather | Swipe right for Calendar →</div>
+    <div class="swipe-hint">👈 Tap left side to refresh | 👉 Swipe or tap right side for Calendar</div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -1091,49 +1091,150 @@
             }, 3000); // Hide cursor after 3 seconds
         }
         
-        // Swipe gesture setup
+        // RELIABLE TOUCH-ONLY NAVIGATION SYSTEM
+        // No external libraries needed - works offline
         function initializeSwipeGestures() {
-            // Wait for DOM to be fully ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initializeSwipeGestures);
-                return;
-            }
+            console.log('🚀 Initializing RELIABLE touch navigation...');
             
-            const hammer = new Hammer(document.body, {
-                recognizers: [
-                    [Hammer.Swipe, { direction: Hammer.DIRECTION_HORIZONTAL }]
-                ]
+            let startX = 0;
+            let startY = 0;
+            let currentX = 0;
+            let currentY = 0;
+            let isSwipeGesture = false;
+            
+            // Touch start
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length !== 1) return; // Only single touch
+                
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                isSwipeGesture = true;
+                
+                console.log(`👆 Touch start at: ${startX}, ${startY}`);
+            }, { passive: false });
+            
+            // Touch move - track movement
+            document.addEventListener('touchmove', (e) => {
+                if (!isSwipeGesture || e.touches.length !== 1) return;
+                
+                const touch = e.touches[0];
+                currentX = touch.clientX;
+                currentY = touch.clientY;
+                
+                // Prevent scrolling during swipe
+                e.preventDefault();
+            }, { passive: false });
+            
+            // Touch end - detect swipe
+            document.addEventListener('touchend', (e) => {
+                if (!isSwipeGesture) return;
+                
+                const deltaX = currentX - startX;
+                const deltaY = currentY - startY;
+                const absDeltaX = Math.abs(deltaX);
+                const absDeltaY = Math.abs(deltaY);
+                
+                console.log(`👋 Touch end - deltaX: ${deltaX}, deltaY: ${deltaY}`);
+                
+                // Must be primarily horizontal movement
+                if (absDeltaX > absDeltaY && absDeltaX > 50) {
+                    if (deltaX > 0) {
+                        // Swiped RIGHT - Go to Calendar
+                        console.log('➡️ SWIPE RIGHT DETECTED - Going to calendar!');
+                        
+                        // Visual feedback
+                        document.body.style.transform = 'translateX(10px)';
+                        setTimeout(() => {
+                            document.body.style.transform = '';
+                        }, 200);
+                        
+                        // Navigate to calendar
+                        setTimeout(() => {
+                            window.location.href = 'calendar.html';
+                        }, 300);
+                        
+                    } else {
+                        // Swiped LEFT - Stay on Weather (maybe cycle weather views)
+                        console.log('⬅️ SWIPE LEFT DETECTED - Staying on weather');
+                        
+                        // Visual feedback
+                        document.body.style.transform = 'translateX(-10px)';
+                        setTimeout(() => {
+                            document.body.style.transform = '';
+                        }, 200);
+                    }
+                } else {
+                    console.log('🤏 Not a valid swipe gesture');
+                }
+                
+                // Reset
+                isSwipeGesture = false;
+                startX = 0;
+                startY = 0;
+            }, { passive: false });
+            
+            // Alternative: Large touch zones for easier navigation
+            createTouchZones();
+            
+            console.log('✅ RELIABLE touch navigation initialized!');
+        }
+        
+        // Create invisible touch zones for easier navigation
+        function createTouchZones() {
+            // Left side - stay on weather
+            const leftZone = document.createElement('div');
+            leftZone.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 25%;
+                height: 100vh;
+                z-index: 9999;
+                background: rgba(255,0,0,0.1);
+                opacity: 0;
+                pointer-events: auto;
+            `;
+            
+            // Right side - go to calendar  
+            const rightZone = document.createElement('div');
+            rightZone.style.cssText = `
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: 25%;
+                height: 100vh;
+                z-index: 9999;
+                background: rgba(0,255,0,0.1);
+                opacity: 0;
+                pointer-events: auto;
+            `;
+            
+            // Click handlers for touch zones
+            leftZone.addEventListener('click', () => {
+                console.log('🔄 Left zone tapped - Refresh weather');
+                location.reload();
             });
             
-            // Set swipe threshold and velocity for better recognition
-            hammer.get('swipe').set({ threshold: 10, velocity: 0.3 });
-            
-            hammer.on('swiperight', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Swipe right detected - going to calendar');
+            rightZone.addEventListener('click', () => {
+                console.log('📅 Right zone tapped - Going to calendar!');
                 window.location.href = 'calendar.html';
             });
             
-            hammer.on('swipeleft', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Swipe left detected - staying on weather');
-                // Could implement different weather views here
+            // Add visual feedback on touch
+            [leftZone, rightZone].forEach(zone => {
+                zone.addEventListener('touchstart', () => {
+                    zone.style.opacity = '0.3';
+                });
+                zone.addEventListener('touchend', () => {
+                    setTimeout(() => zone.style.opacity = '0', 200);
+                });
             });
             
-            // Add keyboard shortcuts for easy testing
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'ArrowRight') {
-                    console.log('Arrow right pressed - going to calendar');
-                    window.location.href = 'calendar.html';
-                } else if (event.key === 'ArrowLeft') {
-                    console.log('Arrow left pressed - staying on weather');
-                    // Stay on weather page
-                }
-            });
+            document.body.appendChild(leftZone);
+            document.body.appendChild(rightZone);
             
-            console.log('Swipe gestures initialized successfully');
+            console.log('✅ Touch zones created for easier navigation');
         }
         
         // Show cursor on touch/mouse movement

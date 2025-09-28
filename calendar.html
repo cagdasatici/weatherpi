@@ -250,8 +250,8 @@
     
     <div class="header">
         <div class="calendar-title">
-            <div class="calendar-icon">📅</div>
-            <div class="title-text">Calendar</div>
+            <div class="calendar-icon">�</div>
+            <div class="title-text">Family Calendar</div>
         </div>
         <div class="current-date" id="currentDate">Loading...</div>
     </div>
@@ -260,7 +260,7 @@
         <div class="loading">Loading events...</div>
     </div>
     
-    <div class="swipe-hint">← Swipe left for Weather | Swipe right for Calendar →</div>
+    <div class="swipe-hint">👈 Swipe or tap left for Weather | 👉 Tap right to stay on Calendar</div>
     <div class="auto-return-indicator" id="autoReturnIndicator">Returning to weather in <span id="countdown">7</span>s</div>
     
     <!-- IMMEDIATE KEYBOARD SETUP - Runs before everything else -->
@@ -468,18 +468,30 @@
             document.getElementById('currentDate').textContent = dateStr;
         }
         
-        // Display events in the UI
+        // Display events in the UI - FAMILY EVENTS ONLY
         function displayEvents(events) {
             const container = document.getElementById('eventsContainer');
             
             if (!events || events.length === 0) {
-                container.innerHTML = '<div class="no-events">📭 No upcoming events</div>';
+                container.innerHTML = '<div class="no-events">📭 No upcoming family events</div>';
+                return;
+            }
+            
+            // FILTER FOR FAMILY CALENDAR ONLY
+            const familyEvents = events.filter(event => 
+                event.calendar && event.calendar.toLowerCase().includes('family')
+            );
+            
+            console.log(`📅 Total events: ${events.length}, Family events: ${familyEvents.length}`);
+            
+            if (familyEvents.length === 0) {
+                container.innerHTML = '<div class="no-events">👪 No upcoming family events<br><small>Showing family calendar only</small></div>';
                 return;
             }
             
             // Group events by day using display_date or start date
             const eventsByDay = {};
-            events.forEach(event => {
+            familyEvents.forEach(event => {
                 let dayKey;
                 if (event.display_date) {
                     dayKey = new Date(event.display_date).toDateString();
