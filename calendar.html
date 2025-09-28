@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Kiosk</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            grid-gap: 15px;
+            cursor: none; /* Hide cursor for kiosk */
+            user-select: none; /* Prevent text selection */
+        }
+        
+        /* Show cursor temporarily when screen is touched/moved */
+        body.show-cursor {
+            cursor: default;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        
+        .calendar-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .calendar-icon {
+            font-size: 64px;
+        }
+        
+        .title-text {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .current-date {
+            text-align: right;
+            font-size: 36px;
+            font-weight: 500;
+            opacity: 1;
+        }
+        
+        .events-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .event-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .event-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .event-card.all-day-event {
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .event-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 60px;
+        }
+        
+        .account-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .event-time {
+            font-size: 13px;
+            font-weight: 600;
+            color: #74b9ff;
+            text-align: center;
+        }
+        
+        .event-time.all-day {
+            color: #ff6b6b;
+            font-size: 11px;
+        }        .event-details {
+            flex: 1;
+        }
+        
+        .event-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #FFFFFF;
+        }
+        
+        .event-location {
+            font-size: 16px;
+            color: #E8F4FD;
+            opacity: 0.9;
+        }
+        
+        .event-day-separator {
+            font-size: 20px;
+            font-weight: 600;
+            color: #FFEAA7;
+            margin: 20px 0 10px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            opacity: 0.7;
+            font-size: 18px;
+            margin: 40px 0;
+        }
+        
+        .error {
+            color: #ff7675;
+            text-align: center;
+            font-size: 20px;
+            margin: 40px 0;
+        }
+        
+        .cache-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            color: #FFE4B5;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.85;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cache-indicator:hover {
+            opacity: 1;
+        }
+        
+        .cache-indicator .icon {
+            font-size: 16px;
+        }
+        
+        .cache-indicator .text {
+            font-weight: 500;
+        }
+        
+        .no-events {
+            text-align: center;
+            font-size: 24px;
+            color: #E8F4FD;
+            margin: 60px 0;
+            opacity: 0.8;
+        }
+        
+        .error-message {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 16px;
+            padding: 20px;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 12px;
+            margin: 20px;
+        }
+        
+        /* Auto-return countdown indicator */
+        .auto-return-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .auto-return-indicator.show {
+            opacity: 1;
+        }
+        .swipe-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            opacity: 0.6;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            animation: fadeInOut 4s ease-in-out infinite;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Cache indicator -->
+    <div id="cacheIndicator" class="cache-indicator">
+        <span class="icon">📅</span>
+        <span class="text" id="cacheIndicatorText">Using cached events</span>
+    </div>
+    
+    <div class="header">
+        <div class="calendar-title">
+            <div class="calendar-icon">📅</div>
+            <div class="title-text">Calendar</div>
+        </div>
+        <div class="current-date" id="currentDate">Loading...</div>
+    </div>
+    
+    <div class="events-container" id="eventsContainer">
+        <div class="loading">Loading events...</div>
+    </div>
+    
+    <div class="swipe-hint">← Swipe left for Weather | Swipe right for Calendar →</div>
+    <div class="auto-return-indicator" id="autoReturnIndicator">Returning to weather in <span id="countdown">7</span>s</div>
+    
+    <!-- IMMEDIATE KEYBOARD SETUP - Runs before everything else -->
+    <script>
+        console.log('🚀 IMMEDIATE: Setting up emergency keyboard detection');
+        
+        // This runs immediately, before DOM loading
+        document.addEventListener('keydown', function(event) {
+            console.log('🔥 EMERGENCY KEYBOARD: Key pressed =', event.key);
+            
+            if (event.key === 'ArrowLeft' || event.key === 'Escape' || event.key === 'Backspace') {
+                console.log('🔥 EMERGENCY KEYBOARD: Navigation key detected - going to weather');
+                event.preventDefault();
+                event.stopPropagation();
+                window.location.href = 'weather.html';
+                return false;
+            }
+        }, true); // Use capture phase to catch events early
+        
+        console.log('✅ EMERGENCY keyboard handler installed');
+    </script>
+
+    <!-- Hammer.js for gesture detection -->
+    <script>
+        // Inline simple swipe detection - no external dependencies
+        let startX = 0;
+        let startY = 0;
+        let startTime = 0;
+        
+        function initializeReliableSwipeDetection() {
+            console.log('🚀 Initializing reliable swipe detection...');
+            
+            // Primary: Simple touch-based swipe detection
+            document.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                startTime = Date.now();
+                console.log('👆 Touch start:', startX, startY);
+            }, { passive: true });
+            
+            document.addEventListener('touchend', function(e) {
+                const endX = e.changedTouches[0].clientX;
+                const endY = e.changedTouches[0].clientY;
+                const endTime = Date.now();
+                
+                const deltaX = endX - startX;
+                const deltaY = endY - startY;
+                const deltaTime = endTime - startTime;
+                
+                console.log('👆 Touch end:', endX, endY, 'Delta:', deltaX, deltaY, 'Time:', deltaTime);
+                
+                // Swipe detection logic
+                if (deltaTime < 1000 && Math.abs(deltaX) > 50 && Math.abs(deltaY) < 100) {
+                    if (deltaX < -50) { // Left swipe
+                        console.log('👈 RELIABLE: Left swipe detected - going to weather');
+                        try {
+                            clearInactivityTimer();
+                            window.location.href = 'weather.html';
+                        } catch (error) {
+                            console.error('Navigation error:', error);
+                            window.location.replace('weather.html');
+                        }
+                    } else if (deltaX > 50) { // Right swipe
+                        console.log('👉 Right swipe detected - staying on calendar');
+                        try {
+                            resetInactivityTimer();
+                        } catch (error) {
+                            console.error('Timer error:', error);
+                        }
+                    }
+                }
+            }, { passive: true });
+            
+            // Secondary: Mouse-based swipe detection for desktop
+            let mouseStartX = 0;
+            let mouseDown = false;
+            
+            document.addEventListener('mousedown', function(e) {
+                mouseStartX = e.clientX;
+                mouseDown = true;
+                console.log('🖱️ Mouse down:', mouseStartX);
+            });
+            
+            document.addEventListener('mouseup', function(e) {
+                if (!mouseDown) return;
+                mouseDown = false;
+                
+                const deltaX = e.clientX - mouseStartX;
+                console.log('🖱️ Mouse up delta:', deltaX);
+                
+                if (Math.abs(deltaX) > 100) {
+                    if (deltaX < -100) { // Left drag
+                        console.log('👈 RELIABLE: Mouse left drag - going to weather');
+                        try {
+                            clearInactivityTimer();
+                            window.location.href = 'weather.html';
+                        } catch (error) {
+                            console.error('Navigation error:', error);
+                            window.location.replace('weather.html');
+                        }
+                    } else if (deltaX > 100) { // Right drag
+                        console.log('👉 Mouse right drag - staying on calendar');
+                        try {
+                            resetInactivityTimer();
+                        } catch (error) {
+                            console.error('Timer error:', error);
+                        }
+                    }
+                }
+            });
+            
+            // Tertiary: Keyboard shortcuts (most reliable)
+            document.addEventListener('keydown', function(e) {
+                console.log('⌨️ Key pressed:', e.key);
+                
+                if (e.key === 'ArrowLeft' || e.key === 'Escape' || e.key === 'Backspace') {
+                    console.log('👈 RELIABLE: Keyboard left - going to weather');
+                    e.preventDefault();
+                    try {
+                        clearInactivityTimer();
+                        window.location.href = 'weather.html';
+                    } catch (error) {
+                        console.error('Navigation error:', error);
+                        window.location.replace('weather.html');
+                    }
+                } else if (e.key === 'ArrowRight') {
+                    console.log('👉 Keyboard right - staying on calendar');
+                    try {
+                        resetInactivityTimer();
+                    } catch (error) {
+                        console.error('Timer error:', error);
+                    }
+                }
+            });
+            
+            console.log('✅ RELIABLE swipe detection initialized');
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script>
+        // Calendar data cache
+        let lastCalendarData = null;
+        let lastUpdateTime = null;
+        
+        // Cache indicator functions (reuse from weather)
+        function showCacheIndicator(ageMinutes) {
+            const indicator = document.getElementById('cacheIndicator');
+            const ageText = document.getElementById('cacheAge');
+            
+            if (ageMinutes < 60) {
+                ageText.textContent = `${ageMinutes}m old`;
+            } else {
+                const ageHours = Math.floor(ageMinutes / 60);
+                ageText.textContent = `${ageHours}h old`;
+            }
+            
+            indicator.classList.add('show');
+        }
+        
+        function hideCacheIndicator() {
+            const indicator = document.getElementById('cacheIndicator');
+            indicator.classList.remove('show');
+        }
+        
+        function showErrorIndicator(message) {
+            const container = document.getElementById('eventsContainer');
+            container.innerHTML = `<div class="error-message">⚠️ ${message}</div>`;
+        }
+        
+        // Load cached data from localStorage
+        function loadCachedData() {
+            try {
+                const cached = localStorage.getItem('calendarCache');
+                if (cached) {
+                    const data = JSON.parse(cached);
+                    lastCalendarData = data.events;
+                    lastUpdateTime = new Date(data.timestamp);
+                    console.log('Loaded cached calendar data from', lastUpdateTime.toLocaleString());
+                }
+            } catch (error) {
+                console.warn('Failed to load cached calendar data:', error);
+            }
+        }
+        
+        // Save successful data to localStorage
+        function saveCachedData() {
+            try {
+                localStorage.setItem('calendarCache', JSON.stringify({
+                    events: lastCalendarData,
+                    timestamp: lastUpdateTime
+                }));
+            } catch (error) {
+                console.warn('Failed to save cached calendar data:', error);
+            }
+        }
+        
+        // Update current date display
+        function updateCurrentDate() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            document.getElementById('currentDate').textContent = dateStr;
+        }
+        
+        // Display events in the UI
+        function displayEvents(events) {
+            const container = document.getElementById('eventsContainer');
+            
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div class="no-events">📭 No upcoming events</div>';
+                return;
+            }
+            
+            // Group events by day using display_date or start date
+            const eventsByDay = {};
+            events.forEach(event => {
+                let dayKey;
+                if (event.display_date) {
+                    dayKey = new Date(event.display_date).toDateString();
+                } else if (event.start) {
+                    dayKey = event.start.toDateString();
+                } else {
+                    return; // Skip events without valid dates
+                }
+                
+                if (!eventsByDay[dayKey]) {
+                    eventsByDay[dayKey] = [];
+                }
+                eventsByDay[dayKey].push(event);
+            });
+            
+            // Generate HTML for events
+            let html = '';
+            Object.keys(eventsByDay).sort().forEach(dayKey => {
+                const dayEvents = eventsByDay[dayKey];
+                const dayDate = new Date(dayKey);
+                const dayLabel = dayDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                
+                // Add day separator
+                html += `<div class="event-day-separator">${dayLabel}</div>`;
+                
+                // Sort events by time (all-day events first, then by time)
+                dayEvents.sort((a, b) => {
+                    if (a.all_day && !b.all_day) return -1;
+                    if (!a.all_day && b.all_day) return 1;
+                    if (a.start && b.start) return a.start - b.start;
+                    return 0;
+                });
+                
+                // Add events for this day
+                dayEvents.forEach(event => {
+                    let timeDisplay = '';
+                    
+                    if (event.all_day) {
+                        timeDisplay = '<div class="event-time all-day">All Day</div>';
+                    } else if (event.display_time) {
+                        timeDisplay = `<div class="event-time">${event.display_time}</div>`;
+                    } else if (event.start) {
+                        const startTime = event.start.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            hour12: false 
+                        });
+                        timeDisplay = `<div class="event-time">${startTime}</div>`;
+                    }
+                    
+                    // Account indicator (first letter of account name)
+                    const accountInitial = (event.account && event.account.length > 0) ? 
+                        event.account.charAt(0).toUpperCase() : '📅';
+                    
+                    html += `
+                        <div class="event-card ${event.all_day ? 'all-day-event' : ''}">
+                            <div class="event-indicator">
+                                <span class="account-badge">${accountInitial}</span>
+                                ${timeDisplay}
+                            </div>
+                            <div class="event-details">
+                                <div class="event-title">${event.title}</div>
+                                ${event.location ? `<div class="event-location">📍 ${event.location}</div>` : ''}
+                                ${event.calendar ? `<div class="event-calendar">${event.calendar}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // RELIABLE calendar data fetching with error isolation  
+        async function fetchCalendarEvents() {
+            console.log('📥 RELIABLE: Starting calendar data fetch...');
+            
+            try {
+                // Fetch real calendar data from Python backend
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch('/calendar_events.json?t=' + Date.now(), {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data && data.events && Array.isArray(data.events)) {
+                    console.log(`✅ RELIABLE: Loaded ${data.events.length} calendar events from backend`);
+                    
+                    // Process events with error protection
+                    const processedEvents = data.events.map(event => {
+                        try {
+                            return {
+                                ...event,
+                                start: event.start ? new Date(event.start) : null,
+                                end: event.end ? new Date(event.end) : null
+                            };
+                        } catch (eventError) {
+                            console.error('Event processing error:', eventError);
+                            return event; // Return unprocessed if processing fails
+                        }
+                    });
+                    
+                    // Cache successful data
+                    lastCalendarData = processedEvents;
+                    lastUpdateTime = new Date();
+                    
+                    try {
+                        saveCachedData();
+                    } catch (cacheError) {
+                        console.error('Cache save failed:', cacheError);
+                        // Continue without caching
+                    }
+                    
+                    // Display events
+                    displayEvents(processedEvents);
+                    
+                    // Hide cache indicator since we have fresh data
+                    try {
+                        hideCacheIndicator();
+                    } catch (indicatorError) {
+                        console.error('Cache indicator update failed:', indicatorError);
+                    }
+                    
+                    console.log('✅ RELIABLE: Calendar update completed successfully');
+                    return processedEvents;
+                    
+                } else {
+                    throw new Error('Invalid calendar data format received');
+                }
+                
+            } catch (error) {
+                console.error('❌ Calendar fetch failed:', error);
+                
+                // RELIABILITY: Always show something, never leave user with blank screen
+                try {
+                    if (lastCalendarData && lastCalendarData.length > 0) {
+                        console.log('📋 RELIABLE: Using cached calendar data');
+                        displayEvents(lastCalendarData);
+                        
+                        const ageMinutes = Math.floor((new Date() - lastUpdateTime) / 60000);
+                        showCacheIndicator(ageMinutes);
+                        
+                        return lastCalendarData;
+                        
+                    } else {
+                        console.log('📅 RELIABLE: Showing sample events (no cached data)');
+                        const sampleEvents = generateSampleEvents();
+                        displayEvents(sampleEvents);
+                        showErrorIndicator('Calendar temporarily unavailable');
+                        
+                        return sampleEvents;
+                    }
+                } catch (fallbackError) {
+                    console.error('❌ CRITICAL: Even fallback failed:', fallbackError);
+                    
+                    // Last resort: show basic message
+                    try {
+                        document.getElementById('eventsContainer').innerHTML = 
+                            '<div class="no-events">📅 Calendar service temporarily unavailable</div>';
+                    } catch (htmlError) {
+                        console.error('❌ FATAL: Cannot update display:', htmlError);
+                    }
+                }
+                
+                return null;
+            }
+        }
+        
+        // Sample events for when calendar backend is unavailable
+        function generateSampleEvents() {
+            const events = [];
+            const today = new Date();
+            
+            // Add some sample events for demonstration
+            events.push({
+                title: "🏠 Sample Event",
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 30),
+                all_day: false,
+                display_date: today.toISOString().split('T')[0],
+                display_time: '09:00',
+                account: 'Demo',
+                calendar: 'Sample Calendar'
+            });
+            
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            events.push({
+                title: "📅 Another Sample",
+                start: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 14, 0),
+                end: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 15, 0),
+                all_day: false,
+                display_date: tomorrow.toISOString().split('T')[0],
+                display_time: '14:00',
+                account: 'Demo',
+                calendar: 'Sample Calendar'
+            });
+            
+            return events;
+        }
+        
+        // RELIABLE inactivity timer with error protection
+        let inactivityTimer;
+        let countdownTimer;
+        let countdownSeconds = 5;
+        const INACTIVITY_TIMEOUT = 7000; // 7 seconds
+        const COUNTDOWN_WARNING = 4000; // Show countdown at 4 seconds remaining
+        
+        function resetInactivityTimer() {
+            try {
+                clearTimeout(inactivityTimer);
+                clearInterval(countdownTimer);
+                hideCountdownIndicator();
+                
+                inactivityTimer = setTimeout(() => {
+                    try {
+                        console.log('RELIABILITY: 7 seconds inactivity - auto-return to weather');
+                        window.location.href = 'weather.html';
+                    } catch (error) {
+                        console.error('Auto-return failed, forcing navigation:', error);
+                        window.location.replace('weather.html'); // Force navigation
+                    }
+                }, INACTIVITY_TIMEOUT);
+                
+                // Show countdown warning after 4 seconds of inactivity
+                setTimeout(() => {
+                    try {
+                        showCountdownIndicator();
+                    } catch (error) {
+                        console.error('Countdown display failed:', error);
+                        // Continue without countdown display
+                    }
+                }, COUNTDOWN_WARNING);
+                
+            } catch (error) {
+                console.error('Reset inactivity timer failed:', error);
+                // Fallback: set simple timeout
+                setTimeout(() => {
+                    window.location.href = 'weather.html';
+                }, INACTIVITY_TIMEOUT);
+            }
+        }
+        
+        function clearInactivityTimer() {
+            try {
+                clearTimeout(inactivityTimer);
+                clearInterval(countdownTimer);
+                hideCountdownIndicator();
+            } catch (error) {
+                console.error('Clear timer failed:', error);
+                // Continue execution, don't block navigation
+            }
+        }
+        
+        function showCountdownIndicator() {
+            try {
+                const indicator = document.getElementById('autoReturnIndicator');
+                const countdownSpan = document.getElementById('countdown');
+                
+                if (!indicator || !countdownSpan) {
+                    console.warn('Countdown elements not found, skipping display');
+                    return;
+                }
+                
+                countdownSeconds = 5;
+                countdownSpan.textContent = countdownSeconds;
+                indicator.classList.add('show');
+                
+                countdownTimer = setInterval(() => {
+                    try {
+                        countdownSeconds--;
+                        countdownSpan.textContent = countdownSeconds;
+                        
+                        if (countdownSeconds <= 0) {
+                            clearInterval(countdownTimer);
+                        }
+                    } catch (error) {
+                        console.error('Countdown update failed:', error);
+                        clearInterval(countdownTimer);
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Show countdown failed:', error);
+                // Don't block, just skip countdown
+            }
+        }
+        
+        function hideCountdownIndicator() {
+            try {
+                const indicator = document.getElementById('autoReturnIndicator');
+                if (indicator) {
+                    indicator.classList.remove('show');
+                }
+                countdownSeconds = 5;
+            } catch (error) {
+                console.error('Hide countdown failed:', error);
+                // Continue, don't block
+            }
+        }
+        
+        // Swipe gesture setup - RELIABILITY FIRST (Updated with native detection)
+        function initializeSwipeGestures() {
+            console.log('🚀 Initializing RELIABLE swipe gestures...');
+            
+            // PRIORITY 1: Initialize our reliable native swipe detection
+            try {
+                initializeReliableSwipeDetection();
+                console.log('✅ Native swipe detection initialized');
+            } catch (error) {
+                console.error('❌ Native swipe detection failed:', error);
+            }
+            
+            // PRIORITY 2: Try to enhance with Hammer.js if available
+            setTimeout(() => {
+                try {
+                    if (typeof Hammer !== 'undefined') {
+                        console.log('✅ Hammer.js available, adding enhanced gestures');
+                        
+                        const hammer = new Hammer(document.body, {
+                            recognizers: [
+                                [Hammer.Swipe, { direction: Hammer.DIRECTION_HORIZONTAL }]
+                            ]
+                        });
+                        
+                        hammer.get('swipe').set({ threshold: 5, velocity: 0.2 });
+                        
+                        hammer.on('swipeleft', (e) => {
+                            try {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('🔨 HAMMER: Swipe left - going to weather');
+                                clearInactivityTimer();
+                                window.location.href = 'weather.html';
+                            } catch (error) {
+                                console.error('Hammer swipe left error:', error);
+                                window.location.href = 'weather.html';
+                            }
+                        });
+                        
+                        hammer.on('swiperight', (e) => {
+                            try {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('🔨 HAMMER: Swipe right - staying');
+                                resetInactivityTimer();
+                            } catch (error) {
+                                console.error('Hammer swipe right error:', error);
+                                resetInactivityTimer();
+                            }
+                        });
+                        
+                        console.log('✅ Hammer.js gestures added successfully');
+                        
+                    } else {
+                        console.log('ℹ️ Hammer.js not available, using native detection only');
+                    }
+                } catch (hammerError) {
+                    console.error('❌ Hammer.js enhancement failed:', hammerError);
+                    console.log('ℹ️ Continuing with native swipe detection');
+                }
+            }, 1000); // Wait 1 second for Hammer.js to load
+            
+            // PRIORITY 3: Activity tracking for inactivity timer
+            try {
+                const activityEvents = ['touchstart', 'touchmove', 'mousedown', 'mousemove', 'click', 'keydown'];
+                activityEvents.forEach(eventType => {
+                    document.addEventListener(eventType, () => {
+                        try {
+                            resetInactivityTimer();
+                        } catch (error) {
+                            console.error(`Activity tracking error for ${eventType}:`, error);
+                        }
+                    }, { passive: true });
+                });
+                
+                console.log('✅ Activity tracking initialized');
+                
+            } catch (activityError) {
+                console.error('❌ Activity tracking failed:', activityError);
+            }
+            
+            // PRIORITY 4: Start inactivity timer
+            try {
+                resetInactivityTimer();
+                console.log('✅ Inactivity timer started');
+            } catch (timerError) {
+                console.error('❌ Inactivity timer failed:', timerError);
+            }
+            
+            console.log('🎯 RELIABLE swipe system fully operational');
+        }
+        
+        // Cursor hiding for kiosk mode (same as weather)
+        let cursorTimer;
+        function showCursor() {
+            document.body.classList.add('show-cursor');
+            clearTimeout(cursorTimer);
+            cursorTimer = setTimeout(() => {
+                document.body.classList.remove('show-cursor');
+            }, 3000);
+        }
+        
+        // Show cursor on touch/mouse movement
+        document.addEventListener('mousemove', showCursor);
+        document.addEventListener('touchstart', showCursor);
+        document.addEventListener('click', showCursor);
+        
+        // RELIABILITY-FIRST calendar initialization
+        function initializeCalendar() {
+            console.log('🚀 RELIABLE calendar initialization starting...');
+            
+            // PRIORITY 1: Initialize navigation gestures IMMEDIATELY
+            // This must work regardless of any data loading issues
+            try {
+                initializeSwipeGestures();
+                console.log('✅ Navigation gestures initialized');
+            } catch (error) {
+                console.error('CRITICAL: Gesture initialization failed:', error);
+                // Even if gestures fail, ensure keyboard navigation works
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+                        window.location.href = 'weather.html';
+                    }
+                });
+            }
+            
+            // PRIORITY 2: Basic UI elements
+            try {
+                updateCurrentDate();
+                console.log('✅ Date display initialized');
+            } catch (error) {
+                console.error('Date display failed:', error);
+            }
+            
+            // PRIORITY 3: Load cached data (non-blocking)
+            try {
+                loadCachedData();
+                
+                if (lastCalendarData && lastCalendarData.length > 0) {
+                    console.log('✅ Displaying cached calendar data');
+                    displayEvents(lastCalendarData);
+                    
+                    const ageMinutes = Math.floor((new Date() - lastUpdateTime) / 60000);
+                    showCacheIndicator(ageMinutes);
+                } else {
+                    console.log('ℹ️  No cached data available');
+                }
+            } catch (error) {
+                console.error('Cached data loading failed:', error);
+                // Show fallback message, but don't block the app
+                document.getElementById('eventsContainer').innerHTML = 
+                    '<div class="no-events">📅 Loading calendar events...</div>';
+            }
+            
+            // PRIORITY 4: Background data fetching (completely non-blocking)
+            setTimeout(() => {
+                try {
+                    fetchCalendarEvents();
+                    console.log('✅ Background calendar fetch started');
+                } catch (error) {
+                    console.error('Calendar fetch failed:', error);
+                    // App continues to work with cached/fallback data
+                }
+            }, 500); // Small delay to ensure UI is responsive first
+            
+            // PRIORITY 5: Set up intervals (non-critical)
+            try {
+                // Update calendar every 15 minutes
+                setInterval(() => {
+                    try {
+                        fetchCalendarEvents();
+                    } catch (error) {
+                        console.error('Scheduled calendar update failed:', error);
+                    }
+                }, 900000);
+                
+                // Update date display every minute  
+                setInterval(() => {
+                    try {
+                        updateCurrentDate();
+                    } catch (error) {
+                        console.error('Scheduled date update failed:', error);
+                    }
+                }, 60000);
+                
+                console.log('✅ Scheduled updates initialized');
+            } catch (error) {
+                console.error('Interval setup failed:', error);
+                // App still works, just without auto-updates
+            }
+            
+            console.log('🎯 RELIABLE calendar initialization completed - app is functional');
+        }
+        
+        // Start the calendar when page loads
+        document.addEventListener('DOMContentLoaded', initializeCalendar);
+        
+        // EMERGENCY FALLBACK: Ensure navigation always works
+        // This runs immediately, regardless of any other setup
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🆘 EMERGENCY: Setting up fallback navigation');
+            
+            // Emergency escape hatch - always works
+            document.addEventListener('click', function(e) {
+                // If user clicks anywhere and holds for 2 seconds, go back to weather
+                let clickTimer = setTimeout(() => {
+                    console.log('🆘 EMERGENCY: Long click detected - returning to weather');
+                    window.location.href = 'weather.html';
+                }, 2000);
+                
+                document.addEventListener('mouseup', () => clearTimeout(clickTimer), { once: true });
+                document.addEventListener('touchend', () => clearTimeout(clickTimer), { once: true });
+            });
+            
+            // Emergency keyboard escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' || (e.ctrlKey && e.key === 'w')) {
+                    console.log('🆘 EMERGENCY: Escape key - returning to weather');
+                    window.location.href = 'weather.html';
+                }
+            });
+            
+            console.log('✅ EMERGENCY fallback navigation ready');
+        });
+        
+        // RELIABILITY: Set up immediate gesture detection on page load
+        document.addEventListener('touchstart', function(e) {
+            let startX = e.touches[0].clientX;
+            let startTime = Date.now();
+            
+            document.addEventListener('touchend', function(endEvent) {
+                let endX = endEvent.changedTouches[0].clientX;
+                let endTime = Date.now();
+                let deltaX = endX - startX;
+                let deltaTime = endTime - startTime;
+                
+                // Simple swipe detection - left swipe = back to weather
+                if (deltaTime < 1000 && Math.abs(deltaX) > 100 && deltaX < -50) {
+                    console.log('🚀 EMERGENCY: Basic swipe left detected - returning to weather');
+                    window.location.href = 'weather.html';
+                }
+            }, { once: true });
+        });
+        
+        console.log('🛡️  RELIABILITY SYSTEMS: All emergency navigation fallbacks loaded');
+    </script>
+</body>
+</html>

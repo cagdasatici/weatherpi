@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Calendar</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            grid-gap: 15px;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        
+        .calendar-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .calendar-icon {
+            font-size: 64px;
+        }
+        
+        .title-text {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .current-date {
+            font-size: 24px;
+            text-align: right;
+            opacity: 0.9;
+        }
+        
+        .events-container {
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .event-card {
+            background: rgba(255, 255, 255, 0.15);
+            margin: 10px 0;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid #00b894;
+            backdrop-filter: blur(5px);
+            transition: transform 0.2s ease;
+        }
+        
+        .event-card:hover {
+            transform: translateX(5px);
+        }
+        
+        .event-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .event-time {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .event-date {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+        
+        .event-description {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .all-day-event {
+            border-left-color: #fdcb6e;
+        }
+        
+        .today-event {
+            border-left-color: #e17055;
+            background: rgba(225, 112, 85, 0.2);
+        }
+        
+        .upcoming-event {
+            border-left-color: #a29bfe;
+        }
+        
+        .no-events {
+            text-align: center;
+            font-size: 24px;
+            opacity: 0.7;
+            margin-top: 50px;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 16px;
+            opacity: 0.7;
+        }
+        
+        .swipe-hint {
+            text-align: center;
+            font-size: 18px;
+            opacity: 0.6;
+            margin-top: 10px;
+        }
+        
+        .calendar-filter {
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: none;
+            color: white;
+            margin-left: 20px;
+        }
+        
+        .calendar-filter option {
+            background: #0984e3;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="calendar-title">
+            <div class="calendar-icon">📅</div>
+            <div>
+                <div class="title-text">Family Calendar</div>
+                <select class="calendar-filter" id="calendarFilter">
+                    <option value="Family">👪 Family Only</option>
+                    <option value="all">📋 All Calendars</option>
+                </select>
+            </div>
+        </div>
+        <div class="current-date" id="currentDate"></div>
+    </div>
+
+    <div class="events-container" id="eventsContainer">
+        <div class="no-events">📡 Loading family events...</div>
+    </div>
+
+    <div class="footer">
+        <div>Last Updated: <span id="lastUpdated">--:--</span></div>
+        <div class="swipe-hint">← Swipe left for Weather | Family Calendar →</div>
+    </div>
+
+    <script>
+        // Embedded calendar data - UPCOMING EVENTS ONLY (from today onwards)
+        const CALENDAR_DATA = {
+            "events": [
+                {
+                    "title": "Studidag -okul yok",
+                    "start": "2025-09-29T00:00:00",
+                    "end": "2025-09-30T00:00:00",
+                    "all_day": true,
+                    "uid": "B1C093F0-7F85-40CC-8E05-7E10B3835B9C",
+                    "description": "🏫 School study day - no classes",
+                    "location": "",
+                    "display_date": "2025-09-29",
+                    "display_time": "",
+                    "account": "Personal iCloud",
+                    "calendar": "Family"
+                },
+                {
+                    "title": "Cagdas - is yemegi aksam yok",
+                    "start": "2025-10-02T17:00:00",
+                    "end": "2025-10-02T19:00:00",
+                    "all_day": false,
+                    "uid": "DD1C22D8-70DC-48D2-805A-81FB8659B88E",
+                    "description": "🍽️ No dinner at work",
+                    "location": "",
+                    "display_date": "2025-10-02",
+                    "display_time": "17:00",
+                    "account": "Personal iCloud",
+                    "calendar": "Family"
+                },
+                {
+                    "title": "Nora turnen ( izleyebiliyoruz)",
+                    "start": "2025-10-07T16:15:00",
+                    "end": "2025-10-07T17:15:00",
+                    "all_day": false,
+                    "uid": "E88FE99B-B853-4ADC-BCD5-38A997B56F03",
+                    "description": "🤸‍♀️ Nora's gymnastics (we can watch)",
+                    "location": "",
+                    "display_date": "2025-10-07",
+                    "display_time": "16:15",
+                    "account": "Personal iCloud",
+                    "calendar": "Family"
+                }
+            ],
+            "last_updated": "2025-09-28T22:49:06.696055"
+        };
+
+        function initializeCalendar() {
+            console.log('🏠 Family Calendar initialized');
+            
+            // Set current date
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            // Set last updated
+            const lastUpdated = new Date(CALENDAR_DATA.last_updated);
+            document.getElementById('lastUpdated').textContent = lastUpdated.toLocaleTimeString();
+            
+            // Load events
+            loadEvents();
+            
+            // Set up filter
+            document.getElementById('calendarFilter').addEventListener('change', loadEvents);
+        }
+        
+        function loadEvents() {
+            const filterValue = document.getElementById('calendarFilter').value;
+            const container = document.getElementById('eventsContainer');
+            
+            console.log(`📅 Loading events with filter: ${filterValue}`);
+            
+            let events = CALENDAR_DATA.events;
+            
+            // Apply filter
+            if (filterValue === 'Family') {
+                events = events.filter(event => event.calendar === 'Family');
+            }
+            
+            // Filter events from TODAY onwards only
+            const today = new Date().toISOString().split('T')[0]; // 2025-09-28
+            events = events.filter(event => event.display_date >= today);
+            
+            console.log(`📍 Showing ${events.length} events from ${today} onwards`);
+            
+            // Sort events by date
+            events.sort((a, b) => new Date(a.start) - new Date(b.start));
+            
+            if (events.length === 0) {
+                container.innerHTML = '<div class="no-events">📅 No upcoming family events</div>';
+                return;
+            }
+            
+            // Group events by date
+            const eventsByDate = {};
+            const todayDate = new Date().toISOString().split('T')[0];
+            
+            events.forEach(event => {
+                const date = event.display_date;
+                if (!eventsByDate[date]) {
+                    eventsByDate[date] = [];
+                }
+                eventsByDate[date].push(event);
+            });
+            
+            // Generate HTML
+            let html = '';
+            
+            Object.keys(eventsByDate).forEach(date => {
+                const dayEvents = eventsByDate[date];
+                const isToday = date === todayDate;
+                const isTomorrow = date === new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                const dateObj = new Date(date + 'T00:00:00');
+                
+                let dayLabel = '';
+                if (isToday) dayLabel = '📍 TODAY';
+                else if (isTomorrow) dayLabel = '🔜 TOMORROW';
+                else dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                
+                html += `<h3 style="margin: 20px 0 10px 0; color: ${isToday ? '#e17055' : isTomorrow ? '#fdcb6e' : '#fff'}; border-bottom: 2px solid ${isToday ? '#e17055' : isTomorrow ? '#fdcb6e' : 'rgba(255,255,255,0.3)'}; padding-bottom: 5px;">
+                    ${dayLabel}
+                </h3>`;
+                
+                dayEvents.forEach(event => {
+                    let eventClass = 'event-card';
+                    if (event.all_day) eventClass += ' all-day-event';
+                    else if (isToday) eventClass += ' today-event';
+                    else eventClass += ' upcoming-event';
+                    
+                    html += `
+                    <div class="${eventClass}">
+                        <div class="event-title">${event.title}</div>
+                        <div class="event-time">
+                            ${event.all_day ? '🌅 All Day' : `⏰ ${event.display_time}`}
+                        </div>
+                        ${event.description ? `<div class="event-description">📝 ${event.description}</div>` : ''}
+                    </div>`;
+                });
+            });
+            
+            container.innerHTML = html;
+            console.log(`✅ Loaded ${events.length} upcoming family events`);
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeCalendar);
+        
+        // Swipe navigation (basic)
+        let startX = 0;
+        document.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            const endX = e.changedTouches[0].clientX;
+            const diff = startX - endX;
+            
+            if (Math.abs(diff) > 100) {
+                if (diff > 0) {
+                    console.log('Swipe left - would go to weather');
+                    // window.location.href = 'weather.html';
+                } else {
+                    console.log('Swipe right - staying on calendar');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

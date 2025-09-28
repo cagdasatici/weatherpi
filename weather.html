@@ -72,12 +72,13 @@
         
         .details {
             text-align: right;
-            font-size: 16px;
+            font-size: 36px;  /* Reduced from 48px - still 2.25x larger than original 16px */
         }
         
         .datetime {
-            opacity: 0.9;
+            opacity: 1;       /* Full opacity for maximum readability */
             margin-bottom: 8px;
+            font-weight: 500; /* Add some weight for better visibility */
         }
         
         .min-max {
@@ -144,17 +145,17 @@
         }
         
         .temp-section .feels-like {
-            font-size: 16px;
-            color: #FFE4B5;
-            font-weight: 400;
+            font-size: 22px;  /* Increased from 16px for better readability */
+            color: #FFEAA7;   /* Warm, readable yellow-orange tone */
+            font-weight: 500;
             margin-bottom: 3px;
-            opacity: 0.9;
+            opacity: 1;       /* Full opacity for maximum readability */
         }
         
         .temp-section .min-max {
-            font-size: 18px;
-            color: #B0E0E6;
-            font-weight: 500;
+            font-size: 22px;  /* Increased from 18px for better readability */
+            color: #E8F4FD;   /* Much more readable light blue-white */
+            font-weight: 600;
         }
         
         .middle-section {
@@ -186,9 +187,10 @@
         }
         
         .forecast-temp {
-            font-size: 20px; /* Bigger main temperature */
+            font-size: 26px; /* Much bigger for better readability - increased from 20px */
             font-weight: bold;
             margin-bottom: 4px;
+            color: #FFFFFF; /* Pure white for maximum contrast */
         }
         
         .charts {
@@ -242,6 +244,25 @@
         .cache-indicator .text {
             font-weight: 500;
         }
+        
+        /* Swipe gesture hints */
+        .swipe-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            opacity: 0.6;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            animation: fadeInOut 4s ease-in-out infinite;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
     </style>
 </head>
 <body>
@@ -256,8 +277,9 @@
             <img id="weatherIcon" class="weather-icon" src="icons/sun.png" alt="Weather" style="display: none;">
             <div class="temp-section">
                 <h1 class="current-temp" id="currentTemp">--°</h1>
-                <div class="feels-like" id="feelsLike">🌡️ Feels like --°</div>
+                <div class="feels-like" id="feelsLike">🌡 Feels like --°</div>
                 <div class="min-max" id="minMax">H: --° L: --°</div>
+                <div class="rain-info" id="rainInfo" style="font-size: 18px; color: #81ECEC; font-weight: 500; margin-top: 3px;">☔ --% • --mm</div>
             </div>
         </div>
         <div class="details">
@@ -273,14 +295,261 @@
             <canvas id="tempChart" width="400" height="150"></canvas>
         </div>
     </div>
+    
+    <div class="swipe-hint">← Swipe left for Weather | Swipe right for Calendar →</div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <!-- Hammer.js for gesture detection -->
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script>
+        // ===== EMERGENCY DESKTOP ACCESS SYSTEM =====
+        let rapidTapCount = 0;
+        let rapidTapTimer = null;
+        let desktopModeActive = false;
+        let inactivityTimer = null;
+        const RAPID_TAP_THRESHOLD = 7;  // 7 rapid taps to activate
+        const RAPID_TAP_WINDOW = 3000;  // 3 seconds window
+        const DESKTOP_TIMEOUT = 5000;   // 5 seconds before returning to kiosk
+        
+        function handleRapidTap(event) {
+            event.preventDefault();
+            rapidTapCount++;
+            
+            console.log(`🖱️ Rapid tap ${rapidTapCount}/${RAPID_TAP_THRESHOLD}`);
+            
+            // Clear existing timer
+            if (rapidTapTimer) {
+                clearTimeout(rapidTapTimer);
+            }
+            
+            // Check if threshold reached
+            if (rapidTapCount >= RAPID_TAP_THRESHOLD) {
+                activateDesktopMode();
+                return;
+            }
+            
+            // Reset counter after time window
+            rapidTapTimer = setTimeout(() => {
+                console.log('🔄 Rapid tap window expired, resetting counter');
+                rapidTapCount = 0;
+            }, RAPID_TAP_WINDOW);
+        }
+        
+        function activateDesktopMode() {
+            if (desktopModeActive) return;
+            
+            console.log('🖥️ EMERGENCY: Activating desktop mode');
+            desktopModeActive = true;
+            rapidTapCount = 0;
+            
+            // Clear any existing timer
+            if (rapidTapTimer) {
+                clearTimeout(rapidTapTimer);
+                rapidTapTimer = null;
+            }
+            
+            // Show desktop access overlay
+            showDesktopAccessOverlay();
+            
+            // Exit fullscreen if possible
+            try {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+                console.log('📱 Attempted to exit fullscreen');
+            } catch (e) {
+                console.log('⚠️ Cannot exit fullscreen:', e.message);
+            }
+            
+            // Make window smaller to show desktop
+            try {
+                window.resizeTo(800, 600);
+                window.moveTo(100, 100);
+                console.log('📐 Resized window for desktop access');
+            } catch (e) {
+                console.log('⚠️ Cannot resize window:', e.message);
+            }
+            
+            // Start inactivity timer
+            startInactivityTimer();
+        }
+        
+        function showDesktopAccessOverlay() {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'desktopAccessOverlay';
+            overlay.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-family: Arial, sans-serif;
+                ">
+                    <div style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 40px;
+                        border-radius: 20px;
+                        text-align: center;
+                        max-width: 500px;
+                        border: 2px solid rgba(255,255,255,0.3);
+                        backdrop-filter: blur(10px);
+                    ">
+                        <h2 style="margin: 0 0 20px 0; font-size: 2.5em;">🛠️ Emergency Desktop Access</h2>
+                        <p style="font-size: 1.2em; margin-bottom: 30px; opacity: 0.9;">
+                            Desktop access activated!<br>
+                            Window resized to show desktop behind.
+                        </p>
+                        <div style="
+                            background: rgba(255,255,255,0.1);
+                            padding: 20px;
+                            border-radius: 10px;
+                            margin-bottom: 20px;
+                        ">
+                            <p style="margin: 0; font-size: 1.1em;">
+                                ⏰ Auto-return to kiosk in: <span id="desktopCountdown">5</span>s
+                            </p>
+                        </div>
+                        <button onclick="returnToKioskMode()" style="
+                            background: rgba(244, 67, 54, 0.3);
+                            border: 2px solid #F44336;
+                            color: white;
+                            padding: 15px 30px;
+                            border-radius: 25px;
+                            font-size: 1.1em;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        " onmouseover="this.style.background='rgba(244, 67, 54, 0.5)'" 
+                           onmouseout="this.style.background='rgba(244, 67, 54, 0.3)'">
+                            🔙 Return to Kiosk Now
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            // Start countdown
+            let countdown = 5;
+            const countdownElement = document.getElementById('desktopCountdown');
+            const countdownTimer = setInterval(() => {
+                countdown--;
+                if (countdownElement) {
+                    countdownElement.textContent = countdown;
+                }
+                if (countdown <= 0) {
+                    clearInterval(countdownTimer);
+                }
+            }, 1000);
+        }
+        
+        function startInactivityTimer() {
+            // Clear existing timer
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+            }
+            
+            inactivityTimer = setTimeout(() => {
+                console.log('⏰ Inactivity timeout - returning to kiosk mode');
+                returnToKioskMode();
+            }, DESKTOP_TIMEOUT);
+        }
+        
+        function returnToKioskMode() {
+            if (!desktopModeActive) return;
+            
+            console.log('🔙 Returning to kiosk mode');
+            desktopModeActive = false;
+            
+            // Clear timers
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
+            
+            // Remove overlay
+            const overlay = document.getElementById('desktopAccessOverlay');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            // Return to fullscreen
+            try {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+                console.log('📱 Returned to fullscreen');
+            } catch (e) {
+                console.log('⚠️ Cannot enter fullscreen:', e.message);
+            }
+            
+            // Try to maximize window
+            try {
+                window.resizeTo(screen.width, screen.height);
+                window.moveTo(0, 0);
+            } catch (e) {
+                console.log('⚠️ Cannot maximize window:', e.message);
+            }
+        }
+        
+        // Add event listeners for rapid tap detection
+        document.addEventListener('touchstart', handleRapidTap, { passive: false });
+        document.addEventListener('click', handleRapidTap);
+        
+        console.log('🛡️ Emergency desktop access system initialized');
+        console.log(`   ${RAPID_TAP_THRESHOLD} rapid taps within ${RAPID_TAP_WINDOW/1000}s to activate`);
+        console.log(`   Auto-return after ${DESKTOP_TIMEOUT/1000}s of inactivity`);
+        
+        // ===== END EMERGENCY DESKTOP ACCESS SYSTEM =====
+        
         const API_KEY = '98cea08ababd57c4fa475e6481b6f4c0';
         const LAT = 52.3008;
         const LON = 4.8639;
         
+        // Helper function to calculate today's rain data from forecast
+        function calculateTodayRain(forecastData) {
+            const today = new Date().toDateString();
+            let todayRainChance = 0;
+            let todayRainAmount = 0;
+            
+            if (forecastData && forecastData.list) {
+                const todayEntries = forecastData.list.filter(entry => {
+                    const entryDate = new Date(entry.dt * 1000).toDateString();
+                    return entryDate === today;
+                });
+                
+                if (todayEntries.length > 0) {
+                    todayRainChance = Math.max(...todayEntries.map(entry => (entry.pop || 0) * 100));
+                    todayRainAmount = todayEntries.reduce((total, entry) => {
+                        return total + (entry.rain ? (entry.rain['3h'] || 0) : 0);
+                    }, 0);
+                }
+            }
+            
+            return { rainChance: Math.round(todayRainChance), rainAmount: todayRainAmount.toFixed(1) };
+        }
+
         // Cache for last successful weather data
         let lastWeatherData = null;
         let lastForecastData = null;
@@ -397,7 +666,7 @@
                 
                 // Update current weather
                 document.getElementById('currentTemp').textContent = `${Math.round(currentData.main.temp)}°`;
-                document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(currentData.main.feels_like)}°`;
+                document.getElementById('feelsLike').textContent = `🌡 Feels like ${Math.round(currentData.main.feels_like)}°`;
                 document.getElementById('minMax').textContent = `H: ${Math.round(currentData.main.temp_max)}° L: ${Math.round(currentData.main.temp_min)}°`;
                 
                 // Update weather icon
@@ -415,6 +684,12 @@
                 }
                 
                 const forecastData = await forecastResponse.json();
+                
+                // Get today's rain data using helper function
+                const todayRain = calculateTodayRain(forecastData);
+                
+                // Update today's rain info
+                document.getElementById('rainInfo').textContent = `☔ ${todayRain.rainChance}% • ${todayRain.rainAmount}mm`;
                 
                 // Cache successful forecast data
                 lastForecastData = forecastData;
@@ -438,8 +713,12 @@
                     
                     // Show cached current weather
                     document.getElementById('currentTemp').textContent = `${Math.round(lastWeatherData.main.temp)}°`;
-                    document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(lastWeatherData.main.feels_like)}°`;
+                    document.getElementById('feelsLike').textContent = `🌡 Feels like ${Math.round(lastWeatherData.main.feels_like)}°`;
                     document.getElementById('minMax').textContent = `H: ${Math.round(lastWeatherData.main.temp_max)}° L: ${Math.round(lastWeatherData.main.temp_min)}°`;
+                    
+                    // Update cached rain info
+                    const cachedTodayRain = calculateTodayRain(lastForecastData);
+                    document.getElementById('rainInfo').textContent = `☔ ${cachedTodayRain.rainChance}% • ${cachedTodayRain.rainAmount}mm`;
                     
                     // Update weather icon
                     const iconElement = document.getElementById('weatherIcon');
@@ -521,9 +800,9 @@
                         <img src="${iconSrc}" alt="${condition}" style="width: 40px; height: 40px;">
                         <div class="forecast-temp-group">
                             <div class="forecast-temp">${temp}°</div>
-                            <div style="font-size: 11px; color: #B0E0E6;">H:${tempMax}° L:${tempMin}°</div>
+                            <div style="font-size: 16px; color: #E8F4FD; font-weight: 600;">H:${tempMax}° L:${tempMin}°</div>
                         </div>
-                        <div style="font-size: 12px; color: #B0E0E6; font-weight: bold;">${rainChance}% • ${rainAmount}mm</div>
+                        <div style="font-size: 16px; color: #81ECEC; font-weight: 600;">${rainChance}% • ${rainAmount}mm</div>
                     `;
                     forecastContainer.appendChild(dayDiv);
                 });
@@ -782,8 +1061,12 @@
         if (lastWeatherData && lastForecastData) {
             console.log('Displaying cached data while fetching updates...');
             document.getElementById('currentTemp').textContent = `${Math.round(lastWeatherData.main.temp)}°`;
-            document.getElementById('feelsLike').textContent = `🌡️ Feels like ${Math.round(lastWeatherData.main.feels_like)}°`;
+            document.getElementById('feelsLike').textContent = `🌡 Feels like ${Math.round(lastWeatherData.main.feels_like)}°`;
             document.getElementById('minMax').textContent = `H: ${Math.round(lastWeatherData.main.temp_max)}° L: ${Math.round(lastWeatherData.main.temp_min)}°`;
+            
+            // Update startup cached rain info
+            const startupTodayRain = calculateTodayRain(lastForecastData);
+            document.getElementById('rainInfo').textContent = `☔ ${startupTodayRain.rainChance}% • ${startupTodayRain.rainAmount}mm`;
             
             const iconElement = document.getElementById('weatherIcon');
             const iconSrc = getWeatherIcon(lastWeatherData.weather[0].main.toLowerCase());
@@ -808,10 +1091,58 @@
             }, 3000); // Hide cursor after 3 seconds
         }
         
+        // Swipe gesture setup
+        function initializeSwipeGestures() {
+            // Wait for DOM to be fully ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeSwipeGestures);
+                return;
+            }
+            
+            const hammer = new Hammer(document.body, {
+                recognizers: [
+                    [Hammer.Swipe, { direction: Hammer.DIRECTION_HORIZONTAL }]
+                ]
+            });
+            
+            // Set swipe threshold and velocity for better recognition
+            hammer.get('swipe').set({ threshold: 10, velocity: 0.3 });
+            
+            hammer.on('swiperight', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Swipe right detected - going to calendar');
+                window.location.href = 'calendar.html';
+            });
+            
+            hammer.on('swipeleft', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Swipe left detected - staying on weather');
+                // Could implement different weather views here
+            });
+            
+            // Add keyboard shortcuts for easy testing
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowRight') {
+                    console.log('Arrow right pressed - going to calendar');
+                    window.location.href = 'calendar.html';
+                } else if (event.key === 'ArrowLeft') {
+                    console.log('Arrow left pressed - staying on weather');
+                    // Stay on weather page
+                }
+            });
+            
+            console.log('Swipe gestures initialized successfully');
+        }
+        
         // Show cursor on touch/mouse movement
         document.addEventListener('mousemove', showCursor);
         document.addEventListener('touchstart', showCursor);
         document.addEventListener('click', showCursor);
+        
+        // Initialize swipe gestures
+        initializeSwipeGestures();
         
         updateDateTime();
         console.log('DateTime function called');

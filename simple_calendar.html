@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Calendar Test</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            cursor: default !important; /* Force cursor to show */
+        }
+        
+        * {
+            cursor: default !important; /* Force cursor on all elements */
+        }
+        
+        .test-area {
+            background: rgba(255,255,255,0.2);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+        
+        .button {
+            background: rgba(255,255,255,0.3);
+            border: 2px solid white;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer !important;
+            display: inline-block;
+            text-decoration: none;
+        }
+        
+        .status {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-area">
+        <h1>📅 Simple Calendar Test</h1>
+        <p>Testing basic navigation</p>
+        
+        <div class="status" id="status">Ready to test...</div>
+        
+        <a href="weather.html" class="button">🏠 Go to Weather (Link)</a>
+        <button onclick="goToWeather()" class="button">🏠 Go to Weather (JS)</button>
+        
+        <div style="margin-top: 30px;">
+            <h3>Test Instructions:</h3>
+            <p>• Press LEFT ARROW key</p>
+            <p>• Press ESCAPE key</p>
+            <p>• Click the buttons above</p>
+            <p>• Drag mouse from right to left</p>
+        </div>
+        
+        <div class="status" id="log">Event log will appear here...</div>
+    </div>
+
+    <script>
+        function updateStatus(msg) {
+            document.getElementById('status').innerHTML = msg;
+            console.log('STATUS: ' + msg);
+        }
+        
+        function addLog(msg) {
+            var log = document.getElementById('log');
+            log.innerHTML = msg + '<br>' + log.innerHTML;
+            console.log('LOG: ' + msg);
+        }
+        
+        function goToWeather() {
+            addLog('🏠 JavaScript button clicked - going to weather');
+            try {
+                window.location.href = 'weather.html';
+            } catch(e) {
+                addLog('❌ Error: ' + e.message);
+            }
+        }
+        
+        // Simple keyboard detection
+        document.addEventListener('keydown', function(event) {
+            addLog('⌨️ Key pressed: ' + event.key);
+            
+            if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+                addLog('👈 LEFT/ESCAPE pressed - going to weather');
+                event.preventDefault();
+                try {
+                    window.location.href = 'weather.html';
+                } catch(e) {
+                    addLog('❌ Navigation error: ' + e.message);
+                }
+            }
+        });
+        
+        // Simple mouse drag detection
+        let mouseStartX = 0;
+        let dragging = false;
+        
+        document.addEventListener('mousedown', function(e) {
+            mouseStartX = e.clientX;
+            dragging = true;
+            addLog('🖱️ Mouse down at: ' + mouseStartX);
+        });
+        
+        document.addEventListener('mouseup', function(e) {
+            if (!dragging) return;
+            dragging = false;
+            
+            var deltaX = e.clientX - mouseStartX;
+            addLog('🖱️ Mouse up, delta: ' + deltaX);
+            
+            if (deltaX < -50) { // Left drag
+                addLog('👈 LEFT DRAG detected - going to weather');
+                try {
+                    window.location.href = 'weather.html';
+                } catch(e) {
+                    addLog('❌ Drag navigation error: ' + e.message);
+                }
+            }
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('✅ Test page loaded and ready');
+            addLog('🚀 All event listeners initialized');
+            
+            // Test basic JavaScript
+            try {
+                addLog('✅ JavaScript is working');
+                addLog('✅ Console logging is working');
+                addLog('✅ Event handlers are ready');
+            } catch(e) {
+                addLog('❌ JavaScript error: ' + e.message);
+            }
+        });
+        
+        // Test if cursor is working
+        document.addEventListener('mousemove', function() {
+            // Just to test if mouse events work
+        });
+    </script>
+</body>
+</html>

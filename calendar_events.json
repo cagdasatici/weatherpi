@@ -1,0 +1,110 @@
+{
+  "events": [
+    {
+      "title": "Green card application",
+      "start": "2020-10-03T15:00:00",
+      "end": "2020-10-03T16:00:00",
+      "all_day": false,
+      "uid": "7E734170-F551-4E42-86F8-6B6DB895AAA0",
+      "description": "Reminder",
+      "location": "",
+      "display_date": "2020-10-03",
+      "display_time": "15:00",
+      "account": "Personal iCloud",
+      "calendar": "Calendar"
+    },
+    {
+      "title": "Kagit copu yarin...",
+      "start": "2025-07-08T18:15:00",
+      "end": "2025-07-08T19:15:00",
+      "all_day": false,
+      "uid": "A735A1DD-0723-4A87-BD46-A30674ED7C48",
+      "description": "Reminder",
+      "location": "",
+      "display_date": "2025-07-08",
+      "display_time": "18:15",
+      "account": "Personal iCloud",
+      "calendar": "Family"
+    },
+    {
+      "title": "Arel-Nora piano-keman",
+      "start": "2025-08-30T12:15:00",
+      "end": "2025-08-30T12:45:00",
+      "all_day": false,
+      "uid": "7A3B102B-2D51-422F-B470-4F2032DA7290",
+      "description": "",
+      "location": "",
+      "display_date": "2025-08-30",
+      "display_time": "12:15",
+      "account": "Personal iCloud",
+      "calendar": "Family"
+    },
+    {
+      "title": "Nora turnen",
+      "start": "2025-09-02T16:15:00",
+      "end": "2025-09-02T17:15:00",
+      "all_day": false,
+      "uid": "A21DF1E4-CB2D-4EC9-8E07-F32861B88A77",
+      "description": "Reminder",
+      "location": "",
+      "display_date": "2025-09-02",
+      "display_time": "16:15",
+      "account": "Personal iCloud",
+      "calendar": "Family"
+    },
+    {
+      "title": "Mad Science  Arel",
+      "start": "2025-09-12T15:15:00",
+      "end": "2025-09-12T16:15:00",
+      "all_day": false,
+      "uid": "EEBD4A91-5DB4-44DE-A570-2ED9F36AA58C",
+      "description": "",
+      "location": "",
+      "display_date": "2025-09-12",
+      "display_time": "15:15",
+      "account": "Personal iCloud",
+      "calendar": "Family"
+    },
+    {
+      "title": "Studidag -okul yok",
+      "start": "2025-09-29T00:00:00",
+      "end": "2025-09-30T00:00:00",
+      "all_day": true,
+      "uid": "B1C093F0-7F85-40CC-8E05-7E10B3835B9C",
+      "description": "",
+      "location": "",
+      "display_date": "2025-09-29",
+      "display_time": "",
+      "account": "Personal iCloud",
+      "calendar": "Family"
+    },
+    {
+      "title": "Cagdas - is yemegi aksam yok",
+      "start": "2025-10-02T17:00:00",
+      "end": "2025-10-02T19:00:00",
+      "all_day": false,
+      "uid": "DD1C22D8-70DC-48D2-805A-81FB8659B88E",
+      "description": "Reminder",
+      "location": "",
+      "display_date": "2025-10-02",
+      "display_time": "17:00",
+      "account": "Personal iCloud",
+      "calendar": "Family"
+    },
+    {
+      "title": "Nora turnen ( izleyebiliyoruz)",
+      "start": "2025-10-07T16:15:00",
+      "end": "2025-10-07T17:15:00",
+      "all_day": false,
+      "uid": "E88FE99B-B853-4ADC-BCD5-38A997B56F03",
+      "description": "",
+      "location": "",
+      "display_date": "2025-10-07",
+      "display_time": "16:15",
+      "account": "Personal iCloud",
+      "calendar": "Family"
+    }
+  ],
+  "last_updated": "2025-09-28T22:49:06.696055",
+  "next_update": "2025-09-28T23:04:06.696075"
+}
