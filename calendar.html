@@ -42,6 +42,10 @@
             font-size: 64px;
         }
         
+        .calendar-icon::before {
+            content: "📅";
+        }
+        
         .title-text {
             font-size: 36px;
             font-weight: bold;
@@ -65,14 +69,22 @@
         .event-card {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
+            border-radius: 4px;
+            padding: 3px 6px;
+            margin-bottom: 1px;
             display: flex;
-            gap: 16px;
-            align-items: flex-start;
+            gap: 6px;
+            align-items: center; /* Center align to prevent overlap */
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            font-size: 12px;
+            line-height: 1.2;
+            min-height: 28px; /* Fixed height to prevent overlap */
+        }
+        
+        .event-card.all-day-event {
+            border-left: 3px solid #ff6b6b;
+            background: rgba(255, 107, 107, 0.05);
         }
         
         .event-card:hover {
@@ -89,42 +101,83 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
-            min-width: 60px;
+            justify-content: center;
+            min-width: 30px;
         }
         
         .account-badge {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            width: 24px;
-            height: 24px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
         }
         
         .event-time {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 600;
             color: #74b9ff;
             text-align: center;
+            background: rgba(116, 185, 255, 0.2);
+            border-radius: 3px;
+            padding: 1px 4px;
+            min-width: 40px;
+            white-space: nowrap;
         }
         
         .event-time.all-day {
             color: #ff6b6b;
-            font-size: 11px;
+            font-size: 10px;
+            background: rgba(255, 107, 107, 0.2);
         }        .event-details {
             flex: 1;
+            min-width: 0; /* Allow text to wrap */
+        }
+        
+        .event-header {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .event-title-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         
         .event-title {
-            font-size: 22px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin: 0;
             color: #FFFFFF;
+            flex: 1;
+            min-width: 0;
+            word-wrap: break-word;
+        }
+        
+        .event-time-badge {
+            font-size: 10px;
+            color: #ffffff;
+            font-weight: 600;
+            background: rgba(116, 185, 255, 0.3);
+            border: 1px solid rgba(116, 185, 255, 0.5);
+            border-radius: 4px;
+            padding: 2px 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .event-time-badge.all-day {
+            background: rgba(255, 107, 107, 0.3);
+            border-color: rgba(255, 107, 107, 0.5);
+            color: #ffffff;
         }
         
         .event-location {
@@ -134,11 +187,11 @@
         }
         
         .event-day-separator {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
             color: #FFEAA7;
-            margin: 20px 0 10px 0;
-            padding-bottom: 10px;
+            margin: 8px 0 4px 0;
+            padding-bottom: 4px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
         
@@ -239,6 +292,60 @@
             0%, 100% { opacity: 0.3; }
             50% { opacity: 0.8; }
         }
+        
+        /* New event layout styles: Date → Time → Event Title (horizontal) */
+        .event-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        
+        .event-date {
+            font-size: 16px;
+            font-weight: 700;
+            color: #FFFFFF;
+            flex-shrink: 0;
+        }
+        
+        .event-time-large {
+            font-size: 16px;
+            font-weight: 700;
+            color: #000000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        
+        .event-time-large.all-day {
+            color: #000000;
+            background: rgba(255, 165, 0, 0.9);
+        }
+        
+        .event-title-details {
+            font-size: 16px;
+            color: #E8F4FD;
+            font-weight: 700;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .event-location {
+            font-size: 11px;
+            color: #B0E0E6;
+            margin-top: 2px;
+        }
+        
+        .event-calendar {
+            font-size: 11px;
+            color: #B0E0E6;
+            margin-top: 1px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -250,7 +357,7 @@
     
     <div class="header">
         <div class="calendar-title">
-            <div class="calendar-icon">�</div>
+            <div class="calendar-icon"></div>
             <div class="title-text">Family Calendar</div>
         </div>
         <div class="current-date" id="currentDate">Loading...</div>
@@ -518,9 +625,6 @@
                     day: 'numeric' 
                 });
                 
-                // Add day separator
-                html += `<div class="event-day-separator">${dayLabel}</div>`;
-                
                 // Sort events by time (all-day events first, then by time)
                 dayEvents.sort((a, b) => {
                     if (a.all_day && !b.all_day) return -1;
@@ -531,33 +635,53 @@
                 
                 // Add events for this day
                 dayEvents.forEach(event => {
-                    let timeDisplay = '';
+                    let timeInfo = '';
                     
                     if (event.all_day) {
-                        timeDisplay = '<div class="event-time all-day">All Day</div>';
+                        timeInfo = 'All Day';
                     } else if (event.display_time) {
-                        timeDisplay = `<div class="event-time">${event.display_time}</div>`;
+                        timeInfo = event.display_time;
                     } else if (event.start) {
                         const startTime = event.start.toLocaleTimeString('en-US', { 
                             hour: '2-digit', 
                             minute: '2-digit', 
                             hour12: false 
                         });
-                        timeDisplay = `<div class="event-time">${startTime}</div>`;
+                        let endTime = '';
+                        if (event.end && !event.all_day) {
+                            endTime = event.end.toLocaleTimeString('en-US', { 
+                                hour: '2-digit', 
+                                minute: '2-digit', 
+                                hour12: false 
+                            });
+                            timeInfo = `${startTime}-${endTime}`;
+                        } else {
+                            timeInfo = startTime;
+                        }
                     }
                     
                     // Account indicator (first letter of account name)
                     const accountInitial = (event.account && event.account.length > 0) ? 
                         event.account.charAt(0).toUpperCase() : '📅';
                     
+                    // Format event date for display
+                    const eventDate = dayDate.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                    
                     html += `
                         <div class="event-card ${event.all_day ? 'all-day-event' : ''}">
                             <div class="event-indicator">
                                 <span class="account-badge">${accountInitial}</span>
-                                ${timeDisplay}
                             </div>
                             <div class="event-details">
-                                <div class="event-title">${event.title}</div>
+                                <div class="event-row">
+                                    <span class="event-date">${eventDate}</span>
+                                    <span class="event-time-large ${event.all_day ? 'all-day' : ''}">${timeInfo}</span>
+                                    <span class="event-title-details">${event.title}</span>
+                                </div>
                                 ${event.location ? `<div class="event-location">📍 ${event.location}</div>` : ''}
                                 ${event.calendar ? `<div class="event-calendar">${event.calendar}</div>` : ''}
                             </div>
@@ -1052,6 +1176,13 @@
         });
         
         console.log('🛡️  RELIABILITY SYSTEMS: All emergency navigation fallbacks loaded');
+        
+        // Auto-return to weather after 10 seconds
+        setTimeout(() => {
+            console.log('⏰ Auto-returning to weather display');
+            window.location.href = 'weather.html';
+        }, 15000); // 15 seconds
+        
     </script>
 </body>
 </html>

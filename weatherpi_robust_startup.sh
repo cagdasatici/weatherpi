@@ -1,37 +1,70 @@
-#!/bin/bash
+#!/bin/bash#!/bin/bash
+
 # WeatherPi Robust Kiosk Startup Script
-# Handles all timing issues and dependencies properly
+
+# WeatherPi Robust Startup Script# Handles all timing issues and dependencies properly
+
+# Ensures Firefox starts reliably in kiosk mode
 
 set -e
 
-# Logging
+export DISPLAY=:0
+
+export XAUTHORITY=/home/cagdas/.Xauthority# Logging
+
 LOG_FILE="/var/log/weatherpi-startup.log"
-exec 1> >(tee -a "$LOG_FILE")
+
+echo "Starting WeatherPi kiosk at $(date)"exec 1> >(tee -a "$LOG_FILE")
+
 exec 2>&1
 
-log_message() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-}
+# Wait for X11 to be ready
+
+while ! xset q &>/dev/null; dolog_message() {
+
+    echo "Waiting for X11..."    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+
+    sleep 2}
+
+done
 
 log_message "🚀 WeatherPi Kiosk Startup Script Starting"
 
-# Wait for essential services with timeout
-wait_for_service() {
+# Kill any existing Firefox processes
+
+pkill firefox-esr 2>/dev/null || true# Wait for essential services with timeout
+
+sleep 2wait_for_service() {
+
     local service=$1
-    local timeout=${2:-60}
-    local count=0
-    
-    log_message "⏳ Waiting for $service service..."
-    
+
+# Wait for network    local timeout=${2:-60}
+
+while ! ping -c 1 google.com &>/dev/null; do    local count=0
+
+    echo "Waiting for network..."    
+
+    sleep 5    log_message "⏳ Waiting for $service service..."
+
+done    
+
     while [ $count -lt $timeout ]; do
-        if systemctl is-active --quiet "$service"; then
-            log_message "✅ $service is active"
+
+# Start calendar fetcher in background        if systemctl is-active --quiet "$service"; then
+
+cd /var/www/html && python3 /var/www/html/calendar_fetcher.py &            log_message "✅ $service is active"
+
             return 0
-        fi
-        sleep 1
+
+# Wait a moment for calendar to load        fi
+
+sleep 3        sleep 1
+
         ((count++))
-    done
-    
+
+# Start Firefox in kiosk mode    done
+
+exec firefox-esr --kiosk --no-remote --new-instance --disable-session-restore http://127.0.0.1/weather.html    
     log_message "❌ Timeout waiting for $service after ${timeout}s"
     return 1
 }

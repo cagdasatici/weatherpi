@@ -1,0 +1,37 @@
+[Unit]
+Description=WeatherPi Kiosk Display
+After=graphical.target lightdm.service nginx.service network-online.target
+Wants=graphical.target network-online.target
+Requires=nginx.service
+
+[Service]
+Type=simple
+User=cagdas
+Group=cagdas
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/cagdas/.Xauthority
+WorkingDirectory=/home/cagdas
+
+# Wait for desktop to be fully ready, then start
+ExecStartPre=/bin/bash -c 'while ! xset q >/dev/null 2>&1; do sleep 2; done'
+ExecStartPre=/bin/bash -c 'while ! ping -c 1 google.com >/dev/null 2>&1; do sleep 5; done'
+ExecStartPre=/bin/bash -c 'pkill firefox-esr || true; sleep 2'
+ExecStartPre=/bin/bash -c 'cd /var/www/html && python3 calendar_fetcher.py'
+ExecStart=/usr/bin/firefox-esr --kiosk --no-remote --new-instance --disable-session-restore http://127.0.0.1/weather.html
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=graphical.target

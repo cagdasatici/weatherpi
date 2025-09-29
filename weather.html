@@ -81,6 +81,47 @@
             font-weight: 500; /* Add some weight for better visibility */
         }
         
+        .datetime-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        
+        .calendar-icon {
+            cursor: pointer;
+            padding: 20px 24px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(255,255,255,0.3);
+            display: inline-block;
+            font-size: 36px;
+            line-height: 1;
+            min-width: 60px;
+            min-height: 60px;
+        }
+        
+        .calendar-icon::before {
+            content: "📅";
+            display: block;
+            font-size: 48px;
+            line-height: 0.9;
+            transform: scale(1.1);
+        }        .calendar-icon:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateZ(0) scale(1.05); /* Slightly larger on hover */
+        }
+        
+        .calendar-icon:active {
+            background: rgba(255,255,255,0.4);
+            transform: translateZ(0) scale(0.95);
+        }
+        
         .min-max {
             font-size: 22px;
             font-weight: bold;
@@ -172,6 +213,8 @@
             padding: 15px;
             display: flex;
             justify-content: space-between;
+            align-self: start;
+            margin-top: -25px; /* Move forecast block up more aggressively */
             font-size: 14px;
         }
         
@@ -245,20 +288,6 @@
             font-weight: 500;
         }
         
-        /* Swipe gesture hints */
-        .swipe-hint {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 14px;
-            opacity: 0.6;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 8px 16px;
-            border-radius: 20px;
-            animation: fadeInOut 4s ease-in-out infinite;
-        }
-        
         @keyframes fadeInOut {
             0%, 100% { opacity: 0.3; }
             50% { opacity: 0.8; }
@@ -283,7 +312,10 @@
             </div>
         </div>
         <div class="details">
-            <div class="datetime" id="datetime">Loading...</div>
+            <div class="datetime-container">
+                <div class="datetime" id="datetime">Loading...</div>
+                <div class="calendar-icon" id="calendarIcon"></div>
+            </div>
         </div>
     </div>
     
@@ -295,8 +327,6 @@
             <canvas id="tempChart" width="400" height="150"></canvas>
         </div>
     </div>
-    
-    <div class="swipe-hint">👈 Tap left side to refresh | 👉 Swipe or tap right side for Calendar</div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -645,6 +675,47 @@
             }
         }
         
+        function showCalendar() {
+            console.log('Calendar icon clicked - navigating to calendar');
+            window.location.href = 'calendar.html';
+        }
+        
+        function initializeCalendarIcon() {
+            const calendarIcon = document.getElementById('calendarIcon');
+            if (calendarIcon) {
+                // Remove any existing onclick
+                calendarIcon.onclick = null;
+                
+                // Add smooth touch feedback
+                calendarIcon.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    calendarIcon.style.transform = 'scale(0.95)';
+                    calendarIcon.style.opacity = '0.7';
+                }, { passive: false });
+                
+                calendarIcon.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Reset visual state
+                    calendarIcon.style.transform = 'scale(1)';
+                    calendarIcon.style.opacity = '1';
+                    // Navigate immediately
+                    window.location.href = 'calendar.html';
+                }, { passive: false });
+                
+                // Fallback for mouse clicks
+                calendarIcon.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = 'calendar.html';
+                }, { passive: false });
+                
+                console.log('Calendar icon touch handlers initialized');
+            } else {
+                console.error('Calendar icon element not found');
+            }
+        }
+        
         async function fetchWeather() {
             try {
                 console.log('=== Starting fetchWeather ===');
@@ -939,6 +1010,9 @@
             
             const temps = next24Hours.map(item => Math.round(item.main.temp));
             const rainData = next24Hours.map(item => item.rain ? item.rain['3h'] || 0 : 0);
+            const hasRain = rainData.some(value => value > 0.5); // Only show rain bars if >0.5mm (meaningful precipitation)
+            
+            console.log('Rain data:', rainData, 'Max rain:', Math.max(...rainData), 'Has significant rain:', hasRain);
             
             // Calculate temperature range for proper scaling
             const minTemp = Math.min(...temps);
@@ -951,47 +1025,54 @@
             
             console.log(`Chart data: ${next24Hours.length} points, temp range: ${minTemp}° to ${maxTemp}°, y-axis: ${yAxisMin}° to ${yAxisMax}°`);
             
+            // Create datasets array - only include rain if there's actual precipitation
+            const datasets = [
+                {
+                    label: '🌡️',
+                    data: temps,
+                    borderColor: '#FFD700',
+                    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    datalabels: {
+                        display: true,
+                        color: '#FFD700',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        formatter: function(value) {
+                            return Math.round(value) + '°';
+                        },
+                        align: 'top',
+                        anchor: 'center',
+                        offset: 8
+                    }
+                }
+            ];
+
+            // Only add rain dataset if there's actual precipitation
+            if (hasRain) {
+                datasets.push({
+                    label: '🌧️',
+                    data: rainData,
+                    borderColor: '#74b9ff',
+                    backgroundColor: 'rgba(116, 185, 255, 0.3)',
+                    borderWidth: 2,
+                    type: 'bar',
+                    yAxisID: 'y1',
+                    datalabels: {
+                        display: false
+                    }
+                });
+            }
+
             new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [
-                        {
-                            label: '🌡️',
-                            data: temps,
-                            borderColor: '#FFD700',
-                            backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            yAxisID: 'y',
-                            datalabels: {
-                                display: true,
-                                color: '#FFD700',
-                                font: {
-                                    size: 16,
-                                    weight: 'bold'
-                                },
-                                formatter: function(value) {
-                                    return Math.round(value) + '°';
-                                },
-                                align: 'top',
-                                anchor: 'center',
-                                offset: 8
-                            }
-                        },
-                        {
-                            label: '🌧️',
-                            data: rainData,
-                            borderColor: '#74b9ff',
-                            backgroundColor: 'rgba(116, 185, 255, 0.3)',
-                            borderWidth: 2,
-                            type: 'bar',
-                            yAxisID: 'y1',
-                            datalabels: {
-                                display: false
-                            }
-                        }
-                    ]
+                    datasets: datasets
                 },
                 plugins: [ChartDataLabels],
                 options: {
@@ -1023,14 +1104,16 @@
                             },
                             grid: { color: 'rgba(255,255,255,0.1)' }
                         },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            min: 0,
-                            ticks: { color: '#74b9ff', font: { size: 14 } },
-                            grid: { drawOnChartArea: false }
-                        }
+                        ...(hasRain && {
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                min: 0,
+                                ticks: { color: '#74b9ff', font: { size: 14 } },
+                                grid: { drawOnChartArea: false }
+                            }
+                        })
                     }
                 }
             });
@@ -1264,6 +1347,10 @@
         console.log('forecast:', document.getElementById('forecast'));
         console.log('weatherIcon:', document.getElementById('weatherIcon'));
         console.log('minMax:', document.getElementById('minMax'));
+        console.log('calendarIcon:', document.getElementById('calendarIcon'));
+        
+        // Initialize calendar icon functionality
+        initializeCalendarIcon();
         
         // Update every 5 minutes
         setInterval(fetchWeather, 300000);  // 5 minutes
