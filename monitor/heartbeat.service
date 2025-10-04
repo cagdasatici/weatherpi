@@ -1,0 +1,9 @@
+[Unit]
+Description=WeatherPi Heartbeat
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/weatherpi/monitor/heartbeat.py
+
+[Install]
+WantedBy=multi-user.target

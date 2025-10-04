@@ -1,0 +1,9 @@
+[Unit]
+Description=WeatherPi Kiosk Watchdog
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/weatherpi/monitor/kiosk_watchdog.py
+
+[Install]
+WantedBy=multi-user.target
