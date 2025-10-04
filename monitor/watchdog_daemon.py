@@ -48,6 +48,9 @@ PROCESS_NAMES = [p.strip() for p in os.environ.get('PROCESS_NAMES', 'chromium').
 RESTART_THRESHOLD = int(os.environ.get('RESTART_THRESHOLD', '2'))
 ESCALATION_THRESHOLD = int(os.environ.get('ESCALATION_THRESHOLD', '3'))
 MONITOR_URL = os.environ.get('MONITOR_URL')
+MONITOR_URLS = [u.strip() for u in os.environ.get('MONITOR_URLS', '').split(',') if u.strip()]
+if MONITOR_URL and not MONITOR_URLS:
+    MONITOR_URLS = [MONITOR_URL]
 ALLOW_REBOOT = os.environ.get('ALLOW_REBOOT', 'false').lower() in ('1','true','yes')
 EXTERNAL_CHECK_HOST = os.environ.get('EXTERNAL_CHECK_HOST', '8.8.8.8')
 EXTERNAL_CHECK_PORT = int(os.environ.get('EXTERNAL_CHECK_PORT', '53'))
@@ -182,17 +185,18 @@ def dns_lookup(name='google.com'):
 
 
 def send_alert(payload):
-    if not MONITOR_URL:
-        log('MONITOR_URL not set, skipping external alert', 'DEBUG')
+    if not MONITOR_URLS:
+        log('MONITOR_URLS/MONITOR_URL not set, skipping external alert', 'DEBUG')
         return
-    try:
-        import urllib.request as request
-        req = request.Request(MONITOR_URL, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        with request.urlopen(req, timeout=10) as resp:
-            code = resp.getcode()
-            log(f'Sent alert to {MONITOR_URL}, response code {code}', 'INFO')
-    except Exception as e:
-        log(f'Failed sending alert: {e}', 'ERROR')
+    import urllib.request as request
+    for url in MONITOR_URLS:
+        try:
+            req = request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+            with request.urlopen(req, timeout=10) as resp:
+                code = resp.getcode()
+                log(f'Sent alert to {url}, response code {code}', 'INFO')
+        except Exception as e:
+            log(f'Failed sending alert to {url}: {e}', 'ERROR')
 
 
 def fundamentals_check():

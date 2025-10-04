@@ -17,6 +17,10 @@ from datetime import datetime
 import subprocess
 
 MONITOR_URL = os.environ.get('MONITOR_URL')
+MONITOR_URLS = [u.strip() for u in os.environ.get('MONITOR_URLS', '').split(',') if u.strip()]
+if MONITOR_URL and MONITOR_URLS == []:
+    # maintain backward compatibility
+    MONITOR_URLS = [MONITOR_URL]
 TIMEOUT = int(os.environ.get('MONITOR_TIMEOUT', '6'))
 PING_HOST = os.environ.get('PING_HOST', '8.8.8.8')
 DISK_PATH = os.environ.get('DISK_PATH', '/')
@@ -88,24 +92,33 @@ def main():
         }
     }
 
-    if not MONITOR_URL:
+    if not MONITOR_URLS:
         print(json.dumps(payload, indent=2))
         return 0
 
-    try:
-        import urllib.request as request
-        req = request.Request(MONITOR_URL, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        with request.urlopen(req, timeout=TIMEOUT) as resp:
-            code = resp.getcode()
-            if 200 <= code < 300:
-                print('heartbeat OK', code)
-                return 0
-            else:
-                print('heartbeat bad code', code)
-                return 2
-    except Exception as e:
-        print('heartbeat error', e)
+    import urllib.request as request
+    ok_any = False
+    last_err = None
+    for url in MONITOR_URLS:
+        try:
+            req = request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+            with request.urlopen(req, timeout=TIMEOUT) as resp:
+                code = resp.getcode()
+                if 200 <= code < 300:
+                    print(f'heartbeat OK {url} {code}')
+                    ok_any = True
+                else:
+                    print(f'heartbeat bad code {url} {code}')
+        except Exception as e:
+            last_err = e
+            print(f'heartbeat error {url} {e}')
+
+    if ok_any:
+        return 0
+    if last_err:
+        print('heartbeat final error', last_err)
         return 3
+    return 2
 
 
 if __name__ == '__main__':
