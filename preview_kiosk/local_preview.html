@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local Kiosk Preview</title>
+<style>
+  html,body{height:100%;margin:0;overflow:hidden;background:#111;color:#fff;font-family:Arial,sans-serif}
+  .frame{width:1024px;height:600px;margin:20px auto;background:#0e1724;border-radius:8px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.6)}
+  iframe{width:100%;height:100%;border:0}
+  .controls{width:1024px;margin:8px auto;text-align:center}
+  button{padding:8px 12px;margin:0 6px}
+</style>
+</head>
+<body>
+  <div class="controls">
+    <button onclick="load('http://localhost:8000/weather.html')">Weather</button>
+    <button onclick="load('http://localhost:8000/calendar.html')">Calendar</button>
+    <button onclick="load('about:blank')">Blank</button>
+  </div>
+  <div class="frame">
+    <iframe id="kiosk" src="http://localhost:8000/weather.html"></iframe>
+  </div>
+<script>
+  function load(url){ document.getElementById('kiosk').src = url; }
+</script>
+</body>
+</html>
