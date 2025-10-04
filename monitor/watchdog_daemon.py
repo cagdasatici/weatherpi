@@ -313,6 +313,14 @@ def check_and_recover():
         send_alert(payload)
 
     # Return the report
+    # Also write latest status to a predictable runtime path so the web UI can read it
+    try:
+        os.makedirs('/var/lib/weatherpi', exist_ok=True)
+        with open('/var/lib/weatherpi/last_status.json', 'w') as f:
+            json.dump(report, f)
+    except Exception as e:
+        log(f'Failed to write last_status.json: {e}', 'DEBUG')
+
     return report
 
 

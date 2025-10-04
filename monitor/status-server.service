@@ -1,0 +1,12 @@
+[Unit]
+Description=WeatherPi Local Status Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/weatherpi/monitor/status_server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
