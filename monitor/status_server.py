@@ -13,6 +13,8 @@ from datetime import datetime
 BIND = os.environ.get('LOCAL_STATUS_BIND', '0.0.0.0')
 PORT = int(os.environ.get('LOCAL_STATUS_PORT', '8080'))
 STATUS_FILE = '/var/lib/weatherpi/last_status.json'
+ALLOWED_IPS = [ip.strip() for ip in os.environ.get('LOCAL_STATUS_ALLOWED_IPS', '127.0.0.1,192.168.178.173').split(',') if ip.strip()]
+STATUS_TOKEN = os.environ.get('LOCAL_STATUS_TOKEN')
 
 HTML_TEMPLATE = (
         '<!doctype html>'
@@ -60,6 +62,30 @@ class Handler(BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header('Access-Control-Allow-Origin', '*')
 
+    def _forbidden(self):
+        self.send_response(403)
+        self._cors()
+        self.end_headers()
+        self.wfile.write(b'Forbidden')
+
+    def _authorized(self):
+        # allow if client IP in allowlist
+        client_ip = self.client_address[0]
+        if client_ip in ALLOWED_IPS:
+            return True
+        # allow if token provided and matches
+        if STATUS_TOKEN:
+            # check header first
+            token = self.headers.get('X-Status-Token')
+            if not token:
+                # fallback to ?token= in URL
+                from urllib.parse import urlparse, parse_qs
+                q = urlparse(self.path).query
+                token = parse_qs(q).get('token', [None])[0]
+            if token == STATUS_TOKEN:
+                return True
+        return False
+
     def do_OPTIONS(self):
         self.send_response(204)
         self._cors()
@@ -67,6 +93,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if not self._authorized():
+            return self._forbidden()
         if self.path == '/status.json':
             if not os.path.exists(STATUS_FILE):
                 self.send_response(404)
