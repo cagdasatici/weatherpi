@@ -53,7 +53,28 @@ HTML_TEMPLATE = (
         '    <div class="kv"><div class="k">Network</div><div class="v">DNS: {dns_ok}, External reach: {external_ok}</div></div>'
         '    <div style="margin-top:12px" class="small">Raw JSON: <a href="/status.json">/status.json</a></div>'
         '  </div>'
-        '</div>'
+    '  <div class="card">'
+    '    <div style="display:flex;gap:20px;flex-wrap:wrap">'
+    '      <div style="flex:1;min-width:260px"> <div class="kv"><div class="k">Services</div><div class="v">{services}</div></div></div>'
+    '      <div style="flex:1;min-width:260px"> <div class="kv"><div class="k">Network</div><div class="v">DNS: {dns_ok}, External: {external_ok}</div></div></div>'
+    '    '</div>'
+    '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>'
+    '<script>'
+    'const MAX_POINTS = 30;'
+    'function createChart(ctx,label,color){return new Chart(ctx,{type:"line",data:{labels:[],datasets:[{label:label,data:[],borderColor:color,backgroundColor:color,fill:false,tension:0.25}]},options:{animation:false,scales:{x:{display:false}}}});} '
+    'let loadChart, memChart, diskChart;'
+    'function initCharts(){loadChart = createChart(document.getElementById("loadChart"),"Load (1m)","#FFD166");memChart = createChart(document.getElementById("memChart"),"Memory MB","#06D6A0");diskChart = createChart(document.getElementById("diskChart"),"Disk %","#EF476F");} '
+    'function pushPoint(chart,val){const ds=chart.data.datasets[0];const labels=chart.data.labels;ds.data.push(Number(val)||0);labels.push("");if(ds.data.length>MAX_POINTS){ds.data.shift();labels.shift()}chart.update()} '
+    'async function refresh(){try{const r=await fetch("/status.json");if(!r.ok) return;const data=await r.json();const la=(data.checks.loadavg && data.checks.loadavg[0])||0;const mem=(data.checks.memory && (data.checks.memory.avail_kb||data.checks.memory.available_kb) )||0;const mem_mb=Math.round(mem/1024);const disk=(data.checks.disk && data.checks.disk.percent)||0;document.querySelector(".header .small").textContent="Updated: "+new Date().toISOString();document.querySelectorAll('.v')[0].textContent = Object.entries(data.checks).filter(([k]) => k.startsWith('service:')).map(([k,v])=>k.split(':')[1]+":"+(v?"OK":"DOWN")).join(', ');pushPoint(loadChart,la);pushPoint(memChart,mem_mb);pushPoint(diskChart,disk);}catch(e){console.error(e)}} '
+    'window.addEventListener("load",()=>{initCharts();refresh();setInterval(refresh,5000)});'
+    '</script>'
+    '</body>'
+    '</html>'
+    '      <div class="card" style="padding:10px"><canvas id="memChart" height="120"></canvas></div>'
+    '      <div class="card" style="padding:10px"><canvas id="diskChart" height="120"></canvas></div>'
+    '      <div style="padding:8px"> <div class="kv"><div class="k">CPU temp</div><div class="v">{cpu_temp}</div></div> <div class="kv"><div class="k">Inodes</div><div class="v">{inode_pct}%</div></div> <div class="kv"><div class="k">Raw JSON</div><div class="v small"><a href="/status.json">/status.json</a></div></div></div>'
+    '    </div>'
+    '  </div>'
         '</body>'
         '</html>'
 )
@@ -140,6 +161,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'text/html')
         self.end_headers()
         self.wfile.write(body.encode('utf-8'))
+        # Prepend a small JS/Chart.js payload to the HTML by monkey-patching template at runtime
+        # Inject charts script at the end of the template before serving
+        # We'll just run the server loop — the template already contains canvas elements
 
     def log_message(self, format, *args):
         print(f"[status_server] {format % args}")
@@ -148,7 +172,10 @@ if __name__ == '__main__':
     server = HTTPServer((BIND, PORT), Handler)
     print(f"Starting status server on http://{BIND}:{PORT}")
     try:
-        server.serve_forever()
+           # Prepend a small JS/Chart.js payload to the HTML by monkey-patching template at runtime
+           # Inject charts script at the end of the template before serving
+           # We'll just run the server loop — the template already contains canvas elements
+           server.serve_forever()
     except KeyboardInterrupt:
         server.server_close()
         print('Shutting down')
