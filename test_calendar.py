@@ -12,6 +12,7 @@ import json
 from calendar_config import load_config, CONFIG_FILE
 from calendar_fetcher import iCloudCalendarFetcher
 from datetime import datetime, timedelta
+from calendar_config import OUTPUT_FILE
 
 def test_configuration():
     """Test if configuration file exists and is valid"""
@@ -22,7 +23,7 @@ def test_configuration():
         print("❌ Configuration file not found or invalid")
         print(f"Expected location: {CONFIG_FILE}")
         return False
-    
+
     print("✅ Configuration loaded successfully")
     
     # Check accounts
@@ -55,6 +56,9 @@ def test_calendar_discovery():
     print("\n📅 Testing calendar discovery...")
     
     config = load_config()
+    if not config:
+        print("⚠️  calendar_credentials.json not found - skipping calendar discovery tests")
+        return True
     fetcher = iCloudCalendarFetcher()
     
     for account in config['accounts']:
@@ -95,6 +99,9 @@ def test_event_fetching():
     print("\n📋 Testing event fetching...")
     
     config = load_config()
+    if not config:
+        print("⚠️  calendar_credentials.json not found - skipping event fetching tests")
+        return True
     fetcher = iCloudCalendarFetcher()
     
     # Date range - next week
@@ -161,14 +168,14 @@ def test_full_integration():
         if success:
             print("✅ Full integration test passed")
             
-            # Check if output file was created
+            # Check if output file was created (respect configured OUTPUT_FILE)
             try:
-                with open('/var/www/html/calendar_events.json', 'r') as f:
+                with open(OUTPUT_FILE, 'r') as f:
                     data = json.load(f)
                     events = data.get('events', [])
-                    print(f"✅ Output file created with {len(events)} events")
+                    print(f"✅ Output file created with {len(events)} events at {OUTPUT_FILE}")
             except FileNotFoundError:
-                print("⚠️  Output file not created (may need to run as different user)")
+                print(f"⚠️  Output file not created (check permissions for: {OUTPUT_FILE})")
             except Exception as e:
                 print(f"⚠️  Could not read output file: {e}")
                 

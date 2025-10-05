@@ -1,3 +1,17 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+env/
+venv/
+
+# Calendar credentials (should be stored securely on the Pi, not in repo)
+calendar_credentials.json
+
+# Local server secrets
+server/.env
 # macOS
 .DS_Store
 .DS_Store?

@@ -19,14 +19,24 @@ import urllib.parse
 # Import our config handler
 from calendar_config import load_config, save_events, CONFIG_FILE
 
-# Set up logging
+import os
+
+# Set up logging to go to stdout (systemd/journal) by default. If an
+# environment variable CALENDAR_LOG is set to a writable path, also write
+# a file there for offline debugging.
+log_handlers = [logging.StreamHandler()]
+log_file = os.environ.get('CALENDAR_LOG')
+if log_file:
+    try:
+        log_handlers.insert(0, logging.FileHandler(log_file))
+    except Exception:
+        # If file handler can't be created, continue with stream only
+        pass
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('/tmp/calendar_fetcher.log'),
-        logging.StreamHandler()
-    ]
+    handlers=log_handlers
 )
 logger = logging.getLogger(__name__)
 

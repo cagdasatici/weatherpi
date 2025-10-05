@@ -1,0 +1,67 @@
+[Unit]
+Description=WeatherPi Enhanced Proxy Server
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=notify
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/weatherpi
+Environment=PATH=/home/pi/weatherpi/venv/bin
+Environment=OPENWEATHER_API_KEY=your_api_key_here
+Environment=PROXY_TOKEN=your_secure_proxy_token_here
+Environment=CACHE_DIR=/var/cache/weatherpi
+Environment=LOG_FILE=/var/log/weatherpi/proxy.log
+Environment=CACHE_TTL=300
+Environment=MEMORY_CACHE_SIZE=100
+Environment=MEMORY_CACHE_TTL=60
+Environment=CIRCUIT_FAILURE_THRESHOLD=5
+Environment=CIRCUIT_RECOVERY_TIMEOUT=60
+Environment=RATE_LIMIT_REQUESTS=60
+Environment=RATE_LIMIT_WINDOW=60
+Environment=UPSTREAM_TIMEOUT=15
+Environment=MAX_RETRIES=3
+ExecStart=/home/pi/weatherpi/venv/bin/gunicorn \
+    --bind 0.0.0.0:8000 \
+    --workers 2 \
+    --worker-class gthread \
+    --threads 4 \
+    --worker-connections 100 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --timeout 30 \
+    --keep-alive 5 \
+    --preload \
+    --access-logfile /var/log/weatherpi/access.log \
+    --error-logfile /var/log/weatherpi/error.log \
+    --log-level info \
+    --capture-output \
+    server.app_working:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# Performance and security settings
+LimitNOFILE=65536
+LimitNPROC=4096
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/cache/weatherpi /var/log/weatherpi /tmp
+NoNewPrivileges=true
+MemoryAccounting=true
+MemoryMax=512M
+CPUQuota=50%
+
+# Health monitoring
+ExecStartPost=/bin/sleep 5
+ExecStartPost=/usr/bin/curl -f http://localhost:8000/api/health || exit 1
+
+[Install]
+WantedBy=multi-user.target

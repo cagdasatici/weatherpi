@@ -15,14 +15,20 @@ from typing import List, Dict, Any
 import os
 import sys
 
-if os.path.exists('/home/pi'):
-    # Pi deployment paths
-    CONFIG_FILE = '/home/pi/calendar_credentials.json'
-    OUTPUT_FILE = '/var/www/html/calendar_events.json'
+# Use the current user's home directory where appropriate so the project
+# works regardless of the username on the device (pi, cagdas, etc.).
+HOME_DIR = os.path.expanduser('~')
+
+# Default deployment paths (web output is expected under the webserver root)
+CONFIG_FILE = os.path.join(HOME_DIR, 'calendar_credentials.json')
+DEFAULT_OUTPUT = '/var/www/html/calendar_events.json'
+
+# If /var/www/html isn't writable in the current environment (dev machine),
+# fall back to a local output file so the project is still usable.
+if os.access(os.path.dirname(DEFAULT_OUTPUT), os.W_OK):
+    OUTPUT_FILE = DEFAULT_OUTPUT
 else:
-    # Local development paths
-    CONFIG_FILE = './calendar_credentials.json'
-    OUTPUT_FILE = './calendar_events.json'
+    OUTPUT_FILE = os.path.join(os.getcwd(), 'calendar_events.json')
 
 # Default configuration structure
 DEFAULT_CONFIG = {

@@ -1,0 +1,17 @@
+[Unit]
+Description=WeatherPi OpenWeather Proxy (instance %i)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/weatherpi
+EnvironmentFile=/home/pi/weatherpi/server/.env
+# Activate virtualenv and run gunicorn
+ExecStart=/bin/bash -lc 'source /home/pi/weatherpi/venv/bin/activate && exec /home/pi/weatherpi/server/gunicorn_start.sh'
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

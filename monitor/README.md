@@ -1,3 +1,10 @@
+This folder contains a lightweight monitoring dashboard and API that runs on the Pi.
+It provides system metrics (CPU, memory, disk, network, temperature) so you can view Pi health
+from a browser without SSH.
+
+Files:
+- `monitor_server.py` - Flask app exposing `/monitor` static dashboard and `/api/metrics` endpoint.
+- `monitor.html` - simple frontend that polls `/api/metrics` and displays charts.
 Monitoring helpers
 
 Files:

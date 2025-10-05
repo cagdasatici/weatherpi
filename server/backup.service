@@ -1,0 +1,13 @@
+[Unit]
+Description=WeatherPi backup service (creates daily backup)
+After=network.target
+
+[Service]
+Type=oneshot
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/weatherpi
+ExecStart=/bin/bash -lc '/home/pi/weatherpi/server/backup_weatherpi.sh /var/backups/weatherpi'
+
+[Install]
+WantedBy=multi-user.target

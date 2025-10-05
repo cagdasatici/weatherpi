@@ -1,0 +1,17 @@
+[Unit]
+Description=WeatherPi Calendar Fetcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+Group=pi
+WorkingDirectory=/opt/weatherpi
+# Use the virtualenv created by setup_calendar.sh when available
+Environment=PATH=/home/pi/calendar-env/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/pi/calendar-env/bin/python3 /opt/weatherpi/calendar_fetcher.py
+
+[Install]
+WantedBy=multi-user.target

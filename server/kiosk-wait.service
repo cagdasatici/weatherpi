@@ -1,0 +1,15 @@
+[Unit]
+Description=Start Kiosk after proxy is healthy
+After=network.target weatherpi-proxy@default.service
+Wants=weatherpi-proxy@default.service
+
+[Service]
+Type=oneshot
+User=pi
+Group=pi
+WorkingDirectory=/home/pi
+ExecStart=/home/pi/weatherpi/server/wait_for_health.sh http://127.0.0.1:8000/api/health 30 2
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

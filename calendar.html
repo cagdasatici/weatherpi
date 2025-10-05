@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendar Kiosk</title>
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent outer scrollbars in kiosk */
+        }
+
+        ::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+
         body {
             margin: 0;
             padding: 15px;
@@ -39,11 +47,14 @@
         }
         
         .calendar-icon {
-            font-size: 64px;
-        }
-        
-        .calendar-icon::before {
-            content: "📅";
+            width: 72px;
+            height: 72px;
+            background-image: url('icons/calendar.svg');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 80%;
+            border-radius: 10px;
+            background-color: rgba(255,255,255,0.04);
         }
         
         .title-text {
@@ -62,8 +73,9 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
-            overflow-y: auto;
+            overflow-y: auto; /* Keep inner scroll */
             padding-right: 10px;
+            max-height: calc(100vh - 220px); /* Ensure it doesn't expand outside viewport */
         }
         
         .event-card {

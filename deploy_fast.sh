@@ -24,10 +24,15 @@ echo "Using host: $HOST"
 # Ensure controlmaster socket (ssh config should already set this up)
 mkdir -p "$(dirname "$CONTROL_PATH")" || true
 
+# Determine remote user (so chown uses the correct account)
+echo "Determining remote user on $HOST..."
+REMOTE_USER=$(ssh -o ControlPath="$CONTROL_PATH" -i "$SSH_ID" "$HOST" 'printf "%s" "$USER" || whoami')
+echo "Remote user appears to be: $REMOTE_USER"
+
 # Sync project to /opt/weatherpi for Python/service files
 echo "Syncing to /opt/weatherpi..."
 rsync -e "ssh -i $SSH_ID -o ControlPath=$CONTROL_PATH" "${RSYNC_OPTS[@]}" ./ $HOST:/tmp/weatherpi_sync/
-ssh -o ControlPath="$CONTROL_PATH" -i "$SSH_ID" $HOST "sudo rsync -a --delete /tmp/weatherpi_sync/ /opt/weatherpi/ && sudo chown -R $(whoami):$(whoami) /opt/weatherpi && rm -rf /tmp/weatherpi_sync"
+ssh -o ControlPath="$CONTROL_PATH" -i "$SSH_ID" $HOST "sudo rsync -a --delete /tmp/weatherpi_sync/ /opt/weatherpi/ && sudo chown -R $REMOTE_USER:$REMOTE_USER /opt/weatherpi && rm -rf /tmp/weatherpi_sync"
 
 # Sync web static files to web root
 echo "Syncing web files to /var/www/html..."

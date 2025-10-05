@@ -1,0 +1,24 @@
+[Unit]
+Description=WeatherPi Chromium Kiosk (Pi4 optimized)
+After=graphical.target network-online.target
+Wants=graphical.target network-online.target
+
+[Service]
+Type=simple
+User=cagdas
+Group=cagdas
+WorkingDirectory=/home/cagdas
+
+# X11 environment
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/cagdas/.Xauthority
+
+# ExecFlags: --kiosk for fullscreen, --no-sandbox required only if running as root (not recommended)
+ExecStartPre=/bin/sleep 8
+ExecStart=/usr/bin/chromium --kiosk --no-first-run --disable-infobars --disable-notifications --disable-translate --disable-background-networking --disable-component-update --disable-features=VizDisplayCompositor --enable-features=OverlayScrollbar --disable-crash-reporter http://127.0.0.1/weather.html
+
+Restart=always
+RestartSec=8
+
+[Install]
+WantedBy=graphical.target

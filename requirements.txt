@@ -1,0 +1,8 @@
+Flask>=2.0
+requests>=2.25
+psutil>=5.9
+prometheus-client>=0.16
+gunicorn>=20.1
+Werkzeug>=2.0
+aiohttp>=3.8
+pytest>=7.0

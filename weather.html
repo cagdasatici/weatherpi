@@ -5,22 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Kiosk</title>
     <style>
+        /* Kiosk: ensure no system scrollbars or margins, inner areas can still scroll */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent browser chrome scrollbars */
+        }
+
+        /* Hide webkit scrollbars (Chromium) but keep scroll functionality */
+        ::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+
+        /* Remove focus outlines in kiosk mode */
+        :focus { outline: none !important; }
+
         body {
             margin: 0;
-               const dateStr = now.toLocaleDateString('en-US', dateOptions);
-            const timeStr = now.toLocaleTimeString('en-US', timeOptions);
-                                     <div style="font-size: 14px; color: #B0E0E6;">H:${tempMax}° L:${tempMin}°</div>
-                        </div>
-                        <div style="font-size: 14px; color: #B0E0E6; font-weight: bold;">${avgRainChance}% • ${totalRainAmount}mm</div>
-            // Add time emoji based on hour
-            const hour = now.getHours();
-            let timeEmoji = '🕐';
-            if (hour >= 6 && hour < 12) timeEmoji = '🌅';
-            else if (hour >= 12 && hour < 18) timeEmoji = '☀️';
-            else if (hour >= 18 && hour < 21) timeEmoji = '🌇';
-            else timeEmoji = '🌙';
-            
-            document.getElementById('datetime').innerHTML = `${timeEmoji} ${dateStr} ${timeStr}`;      padding: 15px;
+            padding: 15px;
             background: linear-gradient(135deg, #74b9ff, #0984e3);
             color: white;
             font-family: 'Arial', sans-serif;
@@ -42,6 +42,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            max-width: 100%;
+            overflow: hidden;
         }
         
         .weather-main {
@@ -69,6 +71,13 @@
             font-size: 18px;
             opacity: 0.8;
         }
+
+        .feels-icon {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
         
         .details {
             text-align: right;
@@ -90,29 +99,24 @@
         
         .calendar-icon {
             cursor: pointer;
-            padding: 20px 24px;
-            border-radius: 16px;
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
-            transition: all 0.2s ease;
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.18);
+            transition: transform 0.2s ease, background 0.2s ease;
             user-select: none;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             touch-action: manipulation;
             -webkit-tap-highlight-color: rgba(255,255,255,0.3);
+            background-image: url('icons/calendar.svg');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 60%;
             display: inline-block;
-            font-size: 36px;
-            line-height: 1;
-            min-width: 60px;
-            min-height: 60px;
         }
         
-        .calendar-icon::before {
-            content: "📅";
-            display: block;
-            font-size: 48px;
-            line-height: 0.9;
-            transform: scale(1.1);
-        }        .calendar-icon:hover {
+        .calendar-icon:hover {
             background: rgba(255,255,255,0.3);
             transform: translateZ(0) scale(1.05); /* Slightly larger on hover */
         }
@@ -205,6 +209,8 @@
             grid-gap: 20px;
             align-items: start;
             margin: 20px 0 40px 0; /* Add spacing for frame effect */
+            max-width: 100%;
+            overflow: hidden;
         }
         
         .forecast {
@@ -553,9 +559,12 @@
         
         // ===== END EMERGENCY DESKTOP ACCESS SYSTEM =====
         
-        const API_KEY = '98cea08ababd57c4fa475e6481b6f4c0';
-        const LAT = 52.3008;
-        const LON = 4.8639;
+    // OpenWeather API key removed from client for security.
+    // The frontend now calls a local proxy at /api/* which keeps the
+    // real API key on the server side (see server/app.py).
+    const API_BASE = '/api';
+    const LAT = 52.3008;
+    const LON = 4.8639;
         
         // Helper function to calculate today's rain data from forecast
         function calculateTodayRain(forecastData) {
@@ -721,7 +730,7 @@
                 console.log('=== Starting fetchWeather ===');
                 
                 // Fetch current weather
-                const currentURL = `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
+                const currentURL = `${API_BASE}/weather?lat=${LAT}&lon=${LON}`;
                 const currentResponse = await fetch(currentURL);
                 
                 if (!currentResponse.ok) {
@@ -747,7 +756,7 @@
                 iconElement.style.display = 'block';
                 
                 // Fetch forecast
-                const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
+                const forecastURL = `${API_BASE}/forecast?lat=${LAT}&lon=${LON}`;
                 const forecastResponse = await fetch(forecastURL);
                 
                 if (!forecastResponse.ok) {
@@ -1341,13 +1350,7 @@
         
         // Test if DOM elements exist
         console.log('DOM elements check:');
-        console.log('currentTemp:', document.getElementById('currentTemp'));
-        console.log('feelsLike:', document.getElementById('feelsLike'));
-        console.log('datetime:', document.getElementById('datetime')); 
-        console.log('forecast:', document.getElementById('forecast'));
-        console.log('weatherIcon:', document.getElementById('weatherIcon'));
-        console.log('minMax:', document.getElementById('minMax'));
-        console.log('calendarIcon:', document.getElementById('calendarIcon'));
+    // Debug logs removed for kiosk mode to avoid console spam
         
         // Initialize calendar icon functionality
         initializeCalendarIcon();

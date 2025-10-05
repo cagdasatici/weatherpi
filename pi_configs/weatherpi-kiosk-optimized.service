@@ -41,7 +41,10 @@ TimeoutStopSec=30
 # Resource limits for stability
 LimitNOFILE=1024
 LimitNPROC=100
-MemoryMax=300M
+# On Pi4 with larger RAM, the strict MemoryMax limit can cause unwanted OOM restarts.
+# Removing or increasing this limit is recommended for Pi4/4GB setups. It's left out by default
+# to allow the system to manage memory more flexibly.
+# MemoryMax=300M
 CPUQuota=80%
 
 # Auto-restart if memory usage gets too high

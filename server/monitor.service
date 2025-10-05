@@ -1,0 +1,16 @@
+[Unit]
+Description=WeatherPi Monitor Server
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/weatherpi/monitor
+EnvironmentFile=/home/pi/weatherpi/server/.env
+ExecStart=/bin/bash -lc 'source /home/pi/weatherpi/venv/bin/activate && python3 monitor/monitor_server.py'
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

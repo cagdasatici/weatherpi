@@ -1,0 +1,16 @@
+/home/pi/weatherpi/logs/*.log {
+    daily
+    rotate 14
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+
+# Rotate cached responses directory listing - keep small (no compression)
+/var/cache/weatherpi/*.json {
+    weekly
+    rotate 4
+    missingok
+    notifempty
+}

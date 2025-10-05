@@ -1,0 +1,23 @@
+[Unit]
+Description=WeatherPi proxy healthcheck and auto-restart
+After=network.target
+
+[Service]
+Type=oneshot
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/weatherpi
+EnvironmentFile=/home/pi/weatherpi/server/.env
+ExecStart=/usr/bin/env bash -c '\
+  set -e; \
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/health || echo 000); \
+  if [ "$STATUS" != "200" ]; then \
+    echo "Healthcheck failed: $STATUS - restarting proxy"; \
+    systemctl restart weatherpi-proxy@default; \
+    exit 1; \
+  else \
+    echo "Healthcheck ok"; \
+  fi'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WeatherPi Monitor</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; }
+    .metric { padding: 8px 12px; border: 1px solid #ddd; margin-bottom: 8px; border-radius: 6px; }
+    .label { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>WeatherPi Monitor</h1>
+  <div id="metrics"></div>
+  <script>
+    async function fetchMetrics(){
+      try{
+        const res = await fetch('/api/metrics');
+        const data = await res.json();
+        const container = document.getElementById('metrics');
+        container.innerHTML = '';
+        function show(k, v){
+          const el = document.createElement('div');
+          el.className='metric';
+          el.innerHTML = `<div class="label">${k}</div><div>${v}</div>`;
+          container.appendChild(el);
+        }
+        if (data.error) show('error', data.error);
+        show('CPU %', data.cpu_percent ?? 'n/a');
+        show('Memory %', data.mem_percent ?? 'n/a');
+        show('Memory used', (data.mem_used ? (data.mem_used/1024/1024).toFixed(1)+' MB' : 'n/a'));
+        show('Disk %', data.disk_percent ?? 'n/a');
+        show('Net sent', data.net_bytes_sent ?? 'n/a');
+        show('Net recv', data.net_bytes_recv ?? 'n/a');
+        show('Temps', JSON.stringify(data.temps || {}));
+        const ts = new Date((data.timestamp||Date.now())*1000);
+        show('Timestamp', ts.toLocaleString());
+      }catch(e){
+        document.getElementById('metrics').innerText = 'Error: '+e;
+      }
+    }
+    setInterval(fetchMetrics, 3000);
+    fetchMetrics();
+  </script>
+</body>
+</html>

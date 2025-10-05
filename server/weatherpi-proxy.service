@@ -1,0 +1,15 @@
+[Unit]
+Description=WeatherPi OpenWeather Proxy
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/weatherpi
+EnvironmentFile=/home/pi/weatherpi/server/.env
+ExecStart=/home/pi/weatherpi/server/gunicorn_start.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,65 +1,86 @@
-#!/usr/bin/env python3
-"""
-Lightweight status HTTP server for WeatherPi watchdog
-- Serves /status.json (raw JSON) and / (simple HTML dashboard)
-- Binds to 0.0.0.0:8080 by default (env LOCAL_STATUS_BIND)
-- No external dependencies
-"""
-import os
-import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from datetime import datetime
+HTML_TEMPLATE = '''<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>WeatherPi — Local Status</title>
+    <style>
+        body {{ font-family: Inter, Arial, sans-serif; background: #0f1724; color: #e6eef6; margin: 0; padding: 20px; }}
+        .container {{ max-width: 980px; margin: 0 auto; }}
+        .header {{ display:flex; align-items:center; justify-content:space-between; }}
+        .header h1 {{ margin:0; font-size:20px }}
+        .card {{ background: linear-gradient(180deg,#0b1220,#0d1522); border-radius:12px; padding:16px; margin-top:16px; box-shadow:0 6px 20px rgba(2,6,23,0.6); }}
+        .kv {{ display:flex; gap:12px; align-items:center }}
+        .k {{ color:#9fb1c9; width:160px }}
+        .v {{ font-weight:700 }}
+        .small {{ font-size:12px; color:#9fb1c9 }}
+        .grid2 {{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px }}
+        canvas {{ width:100% !important; height:120px !important }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>WeatherPi — Local Status</h1>
+            <div class="small">Updated: {updated}</div>
+        </div>
 
-BIND = os.environ.get('LOCAL_STATUS_BIND', '0.0.0.0')
-PORT = int(os.environ.get('LOCAL_STATUS_PORT', '8080'))
-STATUS_FILE = '/var/lib/weatherpi/last_status.json'
-ALLOWED_IPS = [ip.strip() for ip in os.environ.get('LOCAL_STATUS_ALLOWED_IPS', '127.0.0.1,192.168.178.173').split(',') if ip.strip()]
-STATUS_TOKEN = os.environ.get('LOCAL_STATUS_TOKEN')
+        <div class="card">
+            <div style="display:flex;gap:20px;flex-wrap:wrap">
+                <div style="flex:1;min-width:260px">
+                    <div class="kv"><div class="k">Services</div><div class="v">{services}</div></div>
+                </div>
+                <div style="flex:1;min-width:260px">
+                    <div class="kv"><div class="k">Network</div><div class="v">DNS: {dns_ok}, External: {external_ok}</div></div>
+                </div>
+            </div>
 
-HTML_TEMPLATE = (
-        '<!doctype html>'
-        '<html>'
-        '<head>'
-        '<meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<title>WeatherPi — Local Status</title>'
-        '<style>'
-        'body{{font-family:Inter, Arial, sans-serif;background:#0f1724;color:#e6eef6;margin:0;padding:20px}}'
-        '.container{{max-width:980px;margin:0 auto}}'
-        '.header{{display:flex;align-items:center;justify-content:space-between}}'
-        '.header h1{{margin:0;font-size:20px}}'
-        '.card{{background:linear-gradient(180deg,#0b1220, #0d1522);border-radius:12px;padding:16px;margin-top:16px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}}'
-        '.kv{{display:flex;gap:12px;align-items:center}}'
-        '.k{{color:#9fb1c9;width:160px}}'
-        '.v{{font-weight:700}}'
-        '.bad{{color:#ffb4b4}}'
-        '.good{{color:#b8f2b8}}'
-        '.small{{font-size:12px;color:#9fb1c9}}'
-        '</style>'
-        '</head>'
-        '<body>'
-        '<div class="container">'
-        '  <div class="header">'
-        '    <h1>WeatherPi — Local Status</h1>'
-        '    <div class="small">Updated: {updated}</div>'
-        '  </div>'
-        '  <div class="card">'
-        '    <div class="kv"><div class="k">Services</div><div class="v">{services}</div></div>'
-        '    <div class="kv"><div class="k">Disk</div><div class="v">{disk_pct}% used ({disk_free} bytes free)</div></div>'
-        '    <div class="kv"><div class="k">Inodes</div><div class="v">{inode_pct}% used</div></div>'
-        '    <div class="kv"><div class="k">Memory</div><div class="v">{mem_avail} MB available</div></div>'
-        '    <div class="kv"><div class="k">Load (1m)</div><div class="v">{load1}</div></div>'
-        '    <div class="kv"><div class="k">CPU temp</div><div class="v">{cpu_temp}</div></div>'
-        '    <div class="kv"><div class="k">Network</div><div class="v">DNS: {dns_ok}, External reach: {external_ok}</div></div>'
-        '    <div style="margin-top:12px" class="small">Raw JSON: <a href="/status.json">/status.json</a></div>'
-        '  </div>'
-    '  <div class="card">'
-    '    <div style="display:flex;gap:20px;flex-wrap:wrap">'
-    '      <div style="flex:1;min-width:260px"> <div class="kv"><div class="k">Services</div><div class="v">{services}</div></div></div>'
-    '      <div style="flex:1;min-width:260px"> <div class="kv"><div class="k">Network</div><div class="v">DNS: {dns_ok}, External: {external_ok}</div></div></div>'
-    '    '</div>'
-    '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>'
-    '<script>'
+            <div class="grid2">
+                <div class="card"><canvas id="loadChart"></canvas></div>
+                <div class="card"><canvas id="memChart"></canvas></div>
+                <div class="card"><canvas id="diskChart"></canvas></div>
+                <div style="padding:8px">
+                    <div class="kv"><div class="k">CPU temp</div><div class="v">{cpu_temp}</div></div>
+                    <div class="kv"><div class="k">Inodes</div><div class="v">{inode_pct}%</div></div>
+                    <div class="kv"><div class="k">Raw JSON</div><div class="v small"><a href="/status.json">/status.json</a></div></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    <script>
+        const MAX_POINTS = 30;
+        function createChart(ctx,label,color){
+            return new Chart(ctx,{type:'line',data:{labels:[],datasets:[{label:label,data:[],borderColor:color,backgroundColor:color,fill:false,tension:0.25}]},options:{animation:false,scales:{x:{display:false}}}});
+        }
+        let loadChart, memChart, diskChart;
+        function initCharts(){
+            loadChart = createChart(document.getElementById('loadChart'), 'Load (1m)', '#FFD166');
+            memChart = createChart(document.getElementById('memChart'), 'Memory MB', '#06D6A0');
+            diskChart = createChart(document.getElementById('diskChart'), 'Disk %', '#EF476F');
+        }
+        function pushPoint(chart,val){ const ds=chart.data.datasets[0]; const labels=chart.data.labels; ds.data.push(Number(val)||0); labels.push(''); if(ds.data.length>MAX_POINTS){ ds.data.shift(); labels.shift(); } chart.update(); }
+        async function refresh(){
+            try{
+                const r = await fetch('/status.json'); if(!r.ok) return; const data = await r.json();
+                const la = (data.checks.loadavg && data.checks.loadavg[0])||0;
+                const mem = (data.checks.memory && (data.checks.memory.avail_kb||data.checks.memory.available_kb))||0;
+                const mem_mb = Math.round(mem/1024);
+                const disk = (data.checks.disk && data.checks.disk.percent)||0;
+                const servicesText = Object.entries(data.checks).filter(([k])=>k.startsWith('service:')).map(([k,v])=>k.split(':')[1]+':' + (v? 'OK':'DOWN')).join(', ');
+                document.querySelector('.header .small').textContent = 'Updated: ' + new Date().toISOString();
+                const svcElem = document.querySelector('.kv .v'); if(svcElem) svcElem.textContent = servicesText || 'unknown';
+                pushPoint(loadChart, la); pushPoint(memChart, mem_mb); pushPoint(diskChart, disk);
+            }catch(e){ console.error(e); }
+        }
+        window.addEventListener('load', ()=>{ initCharts(); refresh(); setInterval(refresh, 5000); });
+    </script>
+
+</body>
+</html>
+'''
     'const MAX_POINTS = 30;'
     'function createChart(ctx,label,color){return new Chart(ctx,{type:"line",data:{labels:[],datasets:[{label:label,data:[],borderColor:color,backgroundColor:color,fill:false,tension:0.25}]},options:{animation:false,scales:{x:{display:false}}}});} '
     'let loadChart, memChart, diskChart;'
