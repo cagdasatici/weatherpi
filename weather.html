@@ -730,7 +730,7 @@
                 console.log('=== Starting fetchWeather ===');
                 
                 // Fetch current weather
-                const currentURL = `${API_BASE}/weather?lat=${LAT}&lon=${LON}`;
+                const currentURL = `${API_BASE}/weather?lat=${LAT}&lon=${LON}&proxy_token=test_token`;
                 const currentResponse = await fetch(currentURL);
                 
                 if (!currentResponse.ok) {
@@ -756,7 +756,7 @@
                 iconElement.style.display = 'block';
                 
                 // Fetch forecast
-                const forecastURL = `${API_BASE}/forecast?lat=${LAT}&lon=${LON}`;
+                const forecastURL = `${API_BASE}/forecast?lat=${LAT}&lon=${LON}&proxy_token=test_token`;
                 const forecastResponse = await fetch(forecastURL);
                 
                 if (!forecastResponse.ok) {

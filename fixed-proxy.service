@@ -1,0 +1,18 @@
+[Unit]
+Description=WeatherPi Fixed Proxy Server
+After=network.target
+
+[Service]
+Type=simple
+User=cagdas
+WorkingDirectory=/opt/weatherpi
+Environment=PROXY_TOKEN=test_token
+Environment=OPENWEATHER_API_KEY=
+ExecStart=/usr/bin/python3 /opt/weatherpi/fixed_proxy.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
